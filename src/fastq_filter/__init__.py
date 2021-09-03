@@ -37,6 +37,10 @@ class FastqRecord(typing.NamedTuple):
     plus: bytes
     qualities: bytes
 
+    def phred_scores(self) -> np.array:
+        return np.frombuffer(self.qualities, dtype=np.uint8) - \
+               PHRED_SCORE_OFFSET
+
 
 def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
     with xopen.xopen(filepath, "rb", threads=0) as file_h:
@@ -63,14 +67,13 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
-    phred_scores = np.frombuffer(record.qualities, dtype=np.uint8
-                                 ) - PHRED_SCORE_OFFSET
-    qualities = np.power(10, (phred_scores / -10))
+    qualities = np.power(10, (record.phred_scores() / -10))
     average = np.average(qualities)
     return (-10 * math.log10(average)) >= quality
 
 
 FILTERS = {"mean_quality": (mean_quality_filter, (float,))}
+
 
 def argument_parser() -> argparse.ArgumentParser():
     parser = argparse.ArgumentParser()
