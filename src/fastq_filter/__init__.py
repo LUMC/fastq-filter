@@ -17,12 +17,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import io
+import argparse
+import functools
 import math
 import typing
 from typing import Generator
 
 import numpy as np
+
+import xopen
 
 
 class FastqRecord(typing.NamedTuple):
@@ -33,7 +36,7 @@ class FastqRecord(typing.NamedTuple):
 
 
 def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
-    with open(filepath, "rb") as file_h:  # type: io.BufferedReader
+    with xopen.xopen(filepath, "rb", threads=0) as file_h:
         while True:
             name = file_h.readline()
             if name == b"":
@@ -48,23 +51,49 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
                 raise ValueError("Truncated fastq record at EOF")
             if len(sequence) != len(qualities):
                 raise ValueError(f"Fastq record with sequence and qualities "
-                                 f"of unequal length at byte: "
-                                 f"{file_h.tell()}")
+                                 f"of unequal length at record: "
+                                 f"{name.rstrip()}")
             yield FastqRecord(name.rstrip(),
                               sequence.rstrip(),
                               plus.rstrip(),
                               qualities.rstrip())
 
 
-def mean_quality_filter(record: FastqRecord, quality: float) -> bool:
+def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
     phred_scores = np.frombuffer(record.phred_scores, dtype=np.uint8)
     qualities = 10 ^ (phred_scores / -10)
     average = np.average(qualities)
     return -10 * math.log10(average) >= quality
 
 
+FILTERS = {"mean_quality": mean_quality_filter}
+
+
+def argument_parser() -> argparse.ArgumentParser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filter", nargs="+")
+    parser.add_argument("input")
+    parser.add_argument("output")
+    return parser
+
+
 def main():
-    pass
+    args = argument_parser().parse_args()
+    fastq_records = file_to_fastq_records(args.input)
+    filtered_fastq_records = fastq_records
+    for filter_string in args.filter:
+        filter_name, filter_argstring = filter_string.split(':')
+        filter_args = filter_argstring.split(',')
+        try:
+            filter_function = functools.partial(
+                FILTERS[filter_name], *filter_args)
+        except KeyError:
+            raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
+                             f" {' '.join(FILTERS.keys())}")
+        filtered_fastq_records = filter(filter_function, filtered_fastq_records)
+    with xopen.xopen(args.output, "wb", threads=0) as output_h:
+        for record in filtered_fastq_records:
+            output_h.writelines(record)
 
 
 if __name__ == "__main__":
