@@ -24,6 +24,7 @@ import typing
 from typing import Generator
 
 import numpy as np
+from numpy import typing as npt
 
 import xopen
 
@@ -37,7 +38,7 @@ class FastqRecord(typing.NamedTuple):
     plus: bytes
     qualities: bytes
 
-    def phred_scores(self) -> np.array:
+    def phred_scores(self) -> npt.NDArray:
         return np.frombuffer(self.qualities, dtype=np.uint8) - \
                PHRED_SCORE_OFFSET
 
@@ -72,7 +73,22 @@ def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
     return (-10 * math.log10(average)) >= quality
 
 
-FILTERS = {"mean_quality": (mean_quality_filter, (float,))}
+def median_quality_filter(quality: int, record: FastqRecord) -> bool:
+    return np.median(record.phred_scores()) >= quality
+
+
+def min_length_filter(min_length: int, record: FastqRecord) -> bool:
+    return len(record.sequence) < min_length
+
+
+def max_length_filter(max_length: int, record: FastqRecord) -> bool:
+    return len(record.sequence) > max_length
+
+
+FILTERS = {"mean_quality": (mean_quality_filter, (float,)),
+           "median_quality": (median_quality_filter, (int,)),
+           "min_length": (min_length_filter, (int,)),
+           "max_length": (max_length_filter, (int,))}
 
 
 def argument_parser() -> argparse.ArgumentParser():
