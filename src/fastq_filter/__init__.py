@@ -78,11 +78,11 @@ def median_quality_filter(quality: int, record: FastqRecord) -> bool:
 
 
 def min_length_filter(min_length: int, record: FastqRecord) -> bool:
-    return len(record.sequence) < min_length
+    return len(record.sequence) >= min_length
 
 
 def max_length_filter(max_length: int, record: FastqRecord) -> bool:
-    return len(record.sequence) > max_length
+    return len(record.sequence) <= max_length
 
 
 # Store filter names for use on the command line interface. Also store a
