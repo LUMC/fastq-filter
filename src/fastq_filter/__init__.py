@@ -28,11 +28,14 @@ import numpy as np
 import xopen
 
 
+PHRED_SCORE_OFFSET = 33
+
+
 class FastqRecord(typing.NamedTuple):
     name: bytes
     sequence: bytes
     plus: bytes
-    phred_scores: bytes
+    qualities: bytes
 
 
 def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
@@ -60,14 +63,14 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
-    phred_scores = np.frombuffer(record.phred_scores, dtype=np.uint8)
-    qualities = 10 ^ (phred_scores / -10)
+    phred_scores = np.frombuffer(record.qualities, dtype=np.uint8
+                                 ) - PHRED_SCORE_OFFSET
+    qualities = np.power(10, (phred_scores / -10))
     average = np.average(qualities)
-    return -10 * math.log10(average) >= quality
+    return (-10 * math.log10(average)) >= quality
 
 
-FILTERS = {"mean_quality": mean_quality_filter}
-
+FILTERS = {"mean_quality": (mean_quality_filter, (float,))}
 
 def argument_parser() -> argparse.ArgumentParser():
     parser = argparse.ArgumentParser()
@@ -83,17 +86,20 @@ def main():
     filtered_fastq_records = fastq_records
     for filter_string in args.filter:
         filter_name, filter_argstring = filter_string.split(':')
-        filter_args = filter_argstring.split(',')
         try:
-            filter_function = functools.partial(
-                FILTERS[filter_name], *filter_args)
+            filter_function, filter_argtypes = FILTERS[filter_name]
         except KeyError:
             raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
                              f" {' '.join(FILTERS.keys())}")
-        filtered_fastq_records = filter(filter_function, filtered_fastq_records)
+        filter_args = [filter_argtypes[pos](arg) for pos, arg
+                       in enumerate(filter_argstring.split(','))]
+        filter_function_with_args = functools.partial(
+            filter_function, *filter_args)
+        filtered_fastq_records = filter(filter_function_with_args,
+                                        filtered_fastq_records)
     with xopen.xopen(args.output, "wb", threads=0) as output_h:
         for record in filtered_fastq_records:
-            output_h.writelines(record)
+            output_h.write(b"\n".join(record) + b"\n")
 
 
 if __name__ == "__main__":
