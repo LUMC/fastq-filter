@@ -85,6 +85,9 @@ def max_length_filter(max_length: int, record: FastqRecord) -> bool:
     return len(record.sequence) > max_length
 
 
+# Store filter names for use on the command line interface. Also store a
+# tuple of types so the command line arguments (strings) can be converted
+# in the appropiate types.
 FILTERS = {"mean_quality": (mean_quality_filter, (float,)),
            "median_quality": (median_quality_filter, (int,)),
            "min_length": (min_length_filter, (int,)),
@@ -93,9 +96,23 @@ FILTERS = {"mean_quality": (mean_quality_filter, (float,)),
 
 def argument_parser() -> argparse.ArgumentParser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("filter", nargs="+")
-    parser.add_argument("input")
-    parser.add_argument("output")
+    parser.add_argument("filter", nargs="+",
+                        help="Filter and arguments. For example: "
+                             "mean_quality:20, for filtering all reads with "
+                             "an average quality below 20. Available filters: "
+                             "mean_quality:<quality>, "
+                             "median_quality:<quality>, "
+                             "min_length:<length>, "
+                             "max_length:<length>. "
+                             "Multiple filters can be used. Make sure to use "
+                             "faster filters (length) before slower ones "
+                             "(quality) for optimal performance.")
+    parser.add_argument("input",
+                        help="Input FASTQ file. Compression format "
+                             "automatically detected. ")
+    parser.add_argument("output",
+                        help="Output FASTQ file. Compression format "
+                             "automatically determined by file extension.")
     return parser
 
 
@@ -110,12 +127,18 @@ def main():
         except KeyError:
             raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
                              f" {' '.join(FILTERS.keys())}")
+
+        # Convert the strings from the command line in the appropiate types
         filter_args = [filter_argtypes[pos](arg) for pos, arg
                        in enumerate(filter_argstring.split(','))]
+
         filter_function_with_args = functools.partial(
             filter_function, *filter_args)
+
+        # Add the filter. Due to this setup we can add multiple filters
         filtered_fastq_records = filter(filter_function_with_args,
                                         filtered_fastq_records)
+
     with xopen.xopen(args.output, "wb", threads=0) as output_h:
         for record in filtered_fastq_records:
             output_h.write(b"\n".join(record) + b"\n")
