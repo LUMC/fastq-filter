@@ -43,6 +43,12 @@ class FastqRecord(typing.NamedTuple):
                PHRED_SCORE_OFFSET
 
 
+def qualmean(phred_scores: npt.NDArray) -> float:
+    qualities = np.power(10, (phred_scores / -10))
+    average = np.average(qualities)
+    return -10 * math.log10(average)
+
+
 def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
     with xopen.xopen(filepath, "rb", threads=0) as file_h:
         while True:
@@ -68,9 +74,7 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
-    qualities = np.power(10, (record.phred_scores() / -10))
-    average = np.average(qualities)
-    return (-10 * math.log10(average)) >= quality
+    return qualmean(record.phred_scores()) >= quality
 
 
 def median_quality_filter(quality: int, record: FastqRecord) -> bool:
