@@ -44,7 +44,12 @@ class FastqRecord(typing.NamedTuple):
 
 
 def qualmean(phred_scores: npt.NDArray) -> float:
-    qualities = np.power(10, (phred_scores / -10))
+    # 10 ** (phred_scores / -10) -> 10 ** (phred_scores * -0.1)
+    # a ** (p * q) == (a**p)**q according to the math rules.
+    # So we can do (10 ** -0.1) ** phred_scores.
+    # That way we only do one calculation on the phred_score array instead of
+    # two, which improves performance.
+    qualities = np.power((10 ** -0.1), phred_scores)
     average = np.average(qualities)
     return -10 * math.log10(average)
 
