@@ -51,6 +51,9 @@ def qualmean(phred_scores: npt.NDArray) -> float:
     # two, which improves performance.
     qualities = np.power((10 ** -0.1), phred_scores)
     average = np.average(qualities)
+    # math.log10 is faster than np.log10 for a single number,
+    # because math.log10 always operates on a single number and np.log10 works
+    # on arrays internally.
     return -10 * math.log10(average)
 
 
