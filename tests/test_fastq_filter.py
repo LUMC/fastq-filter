@@ -45,7 +45,7 @@ def test_qualmean(qualstring):
 
 
 @pytest.mark.parametrize("qualstring", QUAL_STRINGS)
-def test_qualmean(qualstring):
+def test_qualmedian(qualstring):
     offset = DEFAULT_PHRED_SCORE_OFFSET
     qualities = [qual - offset for qual in array.array("b", qualstring)]
     median_quality = statistics.median(qualities)
