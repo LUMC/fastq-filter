@@ -38,20 +38,6 @@ class FastqRecord(typing.NamedTuple):
     qualities: bytes
 
 
-def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-             ) -> float:
-    phred_scores = np.frombuffer(qualities, dtype=np.int8)
-    probabilities = np.power((10 ** -0.1), phred_scores)
-    average = np.average(probabilities)
-    return -10 * math.log10(average) - phred_offset
-
-
-def qualmedian(qualites: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-               ) -> float:
-    phred_scores = np.frombuffer(qualites, dtype=np.int8)
-    return np.median(phred_scores) - phred_offset
-
-
 def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
     with xopen.xopen(filepath, "rb", threads=0) as file_h:
         while True:
@@ -74,6 +60,20 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
                               sequence.rstrip(),
                               plus.rstrip(),
                               qualities.rstrip())
+
+
+def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
+             ) -> float:
+    phred_scores = np.frombuffer(qualities, dtype=np.int8)
+    probabilities = np.power((10 ** -0.1), phred_scores)
+    average = np.average(probabilities)
+    return -10 * math.log10(average) - phred_offset
+
+
+def qualmedian(qualites: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
+               ) -> float:
+    phred_scores = np.frombuffer(qualites, dtype=np.int8)
+    return np.median(phred_scores) - phred_offset
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
