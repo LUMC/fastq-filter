@@ -24,7 +24,6 @@ import typing
 from typing import Generator
 
 import numpy as np
-from numpy import typing as npt
 
 import xopen
 
@@ -82,7 +81,7 @@ def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
 
 
 def median_quality_filter(quality: int, record: FastqRecord) -> bool:
-    return np.median(record.qualities) >= quality
+    return qualmean(record.qualities) >= quality
 
 
 def min_length_filter(min_length: int, record: FastqRecord) -> bool:
