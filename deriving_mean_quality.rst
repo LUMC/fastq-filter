@@ -2,19 +2,42 @@
 Calculating mean quality scores for FASTQ records
 =================================================
 
+Quality scores in FASTQ records are encoded as ASCII characters. As shown in the
+fourth line of the FASTQ record below.
+
+.. code-block::
+
+    @chr1_245318753_245318470_0_0_0_0_0:0:0_0:0:0_0/1
+    CTGAAATTTCATGAGGCCAGAGTAGGTCAACAGGGGCTAATGAGACAAGATCTAACTAAACAGAGTAAAGAGTTTCTCGGTCACAAGGGAAACTTTTACTATTTGAAATCAGCCTGAGCCAAGATTGATGAGGAAAAAAAAACAAAAACCAA
+    +
+    I?>DC:>@?IDC9??G?>EH9E@66=9<?@E?DC:@<@BBFG>=FIC@F9>7CG?IC?I;CD9>>>A@C7>>8>>D9GCB<;?DD>C;9?>5G>?H?=6@>:G6B<?==A7?@???8IF<75C=@A:BEA@A;C89D:=1?=<A>D=>B66C
+
+These ASCII characters directly correspond to a number from 0-93. These are the
+Phred scores. Each phred score stands for a probability
+
+To calculate the probability P for any phred score x:
+
+.. math::
+
+    P(x) = 10^{ x/ -10}
+
 Phred scores can not be averaged naively. For instance a score of 10 and 30
 do not average 20. 10 stands for :math:`\frac{1}{10^{1.0}}=0.1` and 30 for
 :math:`\frac{1}{10^{3.0}}=0.001`. Averaging these probabilities gives 0.0505.
 :math:`-10 \cdot ^{10}log(0.505)=12.97`.
 
-To calculate the probability P for any quality score x:
-
+To calculate the average quality score for an entire record we can build a
+formula. Starting with the formula for a single ASCII character.
 
 .. math::
 
     P(x) = 10^{ (x - offset)/ -10}
 
-To calculate the average probability P for all quality scores a in a vector:
+Where offset is the Phred offset. (+33 is added to the phred scores to push them
+into the ASCII printable range).
+
+To calculate the average probability P for all quality scores a in a vector we
+take the sum of all the probabilities and divide it by the number of characters:
 
 .. math::
 
@@ -26,7 +49,7 @@ To calculate the phred score for the average P.
 
     Phred_{average} = - 10 * ^{10}log \left(P_{average} \right)
 
-The entire formula for calculating the average score from the base qualities.
+The entire formula for calculating the average phred score from the base qualities.
 
 .. math::
 
@@ -46,6 +69,7 @@ It can be implemented in python with numpy as follows:
         return -10 * math.log10(average)
 
 This requires three operations on the array containing the quality scores.
+
 - Subtracting the phred_offset.
 - Dividing by -10
 - 10 to the power of each value in the array.
@@ -70,7 +94,7 @@ calculation for each base.
 .. math::
     P_{average} = \frac{1}{n}  \sum_{i=1}^{n}\left(\frac{C^{a_i}}{C^{offset}}\right)
 
-But since :math:`\frac{a}{c} + \frac{b}{c} = \frac{a+b}{c}` we can move the
+Since :math:`\frac{a}{c} + \frac{b}{c} = \frac{a+b}{c}` we can move the
 offset outside of the sum
 
 .. math::
@@ -121,3 +145,5 @@ It can be implemented as follows in python:
         average = np.average(probabilities)
         return -10 * math.log10(average) - phred_offset
 
+This implementation is about 20% faster as the implementation at the beginning
+of this document.
