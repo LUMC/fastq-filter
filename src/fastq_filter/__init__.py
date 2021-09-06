@@ -29,7 +29,7 @@ from numpy import typing as npt
 import xopen
 
 
-PHRED_SCORE_OFFSET = 33
+DEFAULT_PHRED_SCORE_OFFSET = 33
 
 
 class FastqRecord(typing.NamedTuple):
@@ -38,23 +38,19 @@ class FastqRecord(typing.NamedTuple):
     plus: bytes
     qualities: bytes
 
-    def phred_scores(self) -> npt.NDArray:
-        return np.frombuffer(self.qualities, dtype=np.uint8) - \
-               PHRED_SCORE_OFFSET
+
+def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
+             ) -> float:
+    phred_scores = np.frombuffer(qualities, dtype=np.int8)
+    probabilities = np.power((10 ** -0.1), phred_scores)
+    average = np.average(probabilities)
+    return -10 * math.log10(average) - phred_offset
 
 
-def qualmean(phred_scores: npt.NDArray) -> float:
-    # 10 ** (phred_scores / -10) -> 10 ** (phred_scores * -0.1)
-    # a ** (p * q) == (a**p)**q according to the math rules.
-    # So we can do (10 ** -0.1) ** phred_scores.
-    # That way we only do one calculation on the phred_score array instead of
-    # two, which improves performance.
-    qualities = np.power((10 ** -0.1), phred_scores)
-    average = np.average(qualities)
-    # math.log10 is faster than np.log10 for a single number,
-    # because math.log10 always operates on a single number and np.log10 works
-    # on arrays internally.
-    return -10 * math.log10(average)
+def qualmedian(qualites: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
+               ) -> float:
+    phred_scores = np.frombuffer(qualites, dtype=np.int8)
+    return np.median(phred_scores) - phred_offset
 
 
 def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
@@ -82,11 +78,11 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
-    return qualmean(record.phred_scores()) >= quality
+    return qualmean(record.qualities) >= quality
 
 
 def median_quality_filter(quality: int, record: FastqRecord) -> bool:
-    return np.median(record.phred_scores()) >= quality
+    return np.median(record.qualities) >= quality
 
 
 def min_length_filter(min_length: int, record: FastqRecord) -> bool:
