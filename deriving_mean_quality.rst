@@ -5,7 +5,7 @@ Calculating mean quality scores for FASTQ records
 Phred scores can not be averaged naively. For instance a score of 10 and 30
 do not average 20. 10 stands for :math:`\frac{1}{10^{1.0}}=0.1` and 30 for
 :math:`\frac{1}{10^{3.0}}=0.001`. Averaging these probabilities gives 0.0505.
-:math:`-10 \cdot ^10log(0.505)=12.97`.
+:math:`-10 \cdot ^{10}log(0.505)=12.97`.
 
 To calculate the probability P for any quality score x:
 
@@ -18,19 +18,19 @@ To calculate the average probability P for all quality scores a in a vector:
 
 .. math::
 
-    P_average = \frac{1}{n}  \sum_{i=1}^{n}{10^{ (a_i - offset)/ -10}}
+    P_{average} = \frac{1}{n}  \sum_{i=1}^{n}{10^{ (a_i - offset)/ -10}}
 
 To calculate the phred score for the average P.
 
 .. math::
 
-    Phred_average = - 10 * ^10log \left(P_average \right)
+    Phred_{average} = - 10 * ^{10}log \left(P_{average} \right)
 
 The entire formula for calculating the average score from the base qualities.
 
 .. math::
 
-    Phred_average = - 10 * ^10log\left(\frac{1}{n}  \sum_{i=1}^{n}{10^{ (a_i - offset)/ -10}}\right)
+    Phred_{average} = - 10 * ^{10}log\left(\frac{1}{n}  \sum_{i=1}^{n}{10^{ (a_i - offset)/ -10}}\right)
 
 It can be implemented in python with numpy as follows:
 
@@ -52,61 +52,60 @@ This requires three operations on the array containing the quality scores.
 
 We can simplify the formula to reduce the number of calculations. We can
 use the following math rule :math:`a^{pq}=(a^p)^q` to remove the division by
--10. This is the same as multiplying with -0.1. We can write
-:math:`{10^{ (a_i - offset)/ -10}` as
-:math:`{\left(10^{-1/10}\right)^{a_i - offset}`. Where we can calculate
-:math:`10^{-1/10}` first as a constant C. Reducing the number of total calculations.
+-10. This is the same as multiplying with -0.1. We can write :math:`10^{(a_i - offset)/ -10}`
+as :math:`\left(10^{-\frac{1}{10}}\right)^{a_i - offset}`. Where we can
+calculate :math:`10^{-\frac{1}{10}}` first as a constant C. Reducing the number of total calculations.
 
 .. math::
-    P_average = \frac{1}{n}  \sum_{i=1}^{n}{\left(10^{-1/10}\right)^{a_i - offset}}
+    P_{average} = \frac{1}{n}  \sum_{i=1}^{n}{\left(10^{-\frac{1}{10}}\right)^{a_i - offset}}
 
 .. math::
-    P_average = \frac{1}{n}  \sum_{i=1}^{n}{C^{a_i - offset}}
+    P_{average} = \frac{1}{n}  \sum_{i=1}^{n}{C^{a_i - offset}}
 
-where :math:`C=10^{-1/10}`.
+where :math:`C=10^{-\frac{1}{10}}`.
 
 We can use :math:`a^{p-q} = \frac{a^p}{a^q}` to get rid of the ``-offset``
 calculation for each base.
 
 .. math::
-    P_average = \frac{1}{n}  \sum_{i=1}^{n}\left(\frac{C^{a_i}}{C^offset}\right)
+    P_{average} = \frac{1}{n}  \sum_{i=1}^{n}\left(\frac{C^{a_i}}{C^{offset}}\right)
 
 But since :math:`\frac{a}{c} + \frac{b}{c} = \frac{a+b}{c}` we can move the
 offset outside of the sum
 
 .. math::
-    P_average = \frac{1}{C^offset} \cdot \frac{1}{n}  \sum_{i=1}^{n}C^{a_i}
+    P_{average} = \frac{1}{C^{offset}} \cdot \frac{1}{n}  \sum_{i=1}^{n}C^{a_i}
 
 We now have eliminated the need to subtract the offset and divide by -10 for
 each element in the array of scores. The total formula for the average phred
 score now looks as follows:
 
 .. math::
-    Phred_average = - 10 * ^10log \left(\frac{1}{C^offset} \cdot \frac{1}{n}  \sum_{i=1}^{n}C^{a_i} \right)
+    Phred_{average} = - 10 * ^{10}log \left(\frac{1}{C^{offset}} \cdot \frac{1}{n}  \sum_{i=1}^{n}C^{a_i} \right)
 
 since :math:`log(a/b)=log(a) - log(b)` we can bring the offset outside of the
 log.
 
 .. math::
-    Phred_average = - 10 * \left( ^10log \left(\cdot \frac{1}{n}  \sum_{i=1}^{n}C^{a_i} \right) - ^10log(C^offset) \right)
+    Phred_{average} = - 10 * \left( ^{10}log \left( \frac{1}{n}  \sum_{i=1}^{n}C^{a_i} \right) - ^{10}log(C^{offset}) \right)
 
-We can simplify further: :math:`^10log(C^offset)` equals
-:math:`^10log\left(\left(10^{-1/10}\right)^offset\right)` equals
-:math:`^10log\left(10^{-offset/10}\right)` and the log is cancelled out
+We can simplify further: :math:`^{10}log(C^{offset})` equals
+:math:`^{10}log\left(\left(10^{-\frac{1}{10}}\right)^{offset}\right)` equals
+:math:`^{10}log\left(10^{-offset/10}\right)` and the log is cancelled out
 so :math:`-\frac{offset}{10}`
 
 .. math::
-    Phred_average = - 10 * \left(^10log \left(\cdot \frac{1}{n}  \sum_{i=1}^{n}C^{a_i} \right) - -\frac{offset}{10} \right)
+    Phred_{average} = - 10 * \left(^{10}log \left( \frac{1}{n}  \sum_{i=1}^{n}C^{a_i} \right) - -\frac{offset}{10} \right)
 
 ``--`` becomes ``+``. Also we can remove the braces by multiplying both terms in
 the braces with ``-10``
 
 
 .. math::
-    Phred_average = - 10 * ^10log \left(\cdot \frac{1}{n}  \sum_{i=1}^{n}C^{a_i}\right)  -offset
+    Phred_{average} = - 10 * ^{10}log \left( \frac{1}{n}  \sum_{i=1}^{n}C^{a_i}\right)  -offset
 
 .. math::
-    Phred_average = - 10 * ^10log \left(\cdot \frac{1}{n}  \sum_{i=1}^{n}\left(10^{-1/10}\right)^{a_i}\right)  -offset
+    Phred_{average} = - 10 * ^{10}log \left(\frac{1}{n}  \sum_{i=1}^{n}\left(10^{-\frac{1}{10}}\right)^{a_i}\right)  -offset
 
 It can be implemented as follows in python:
 
