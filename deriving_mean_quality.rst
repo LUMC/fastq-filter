@@ -19,7 +19,7 @@ To calculate the probability P for any phred score x:
 
 .. math::
 
-    P(x) = 10^{ x/ -10}
+    P(x) = 10^{ \frac{x}{-10}}
 
 Phred scores can not be averaged naively. For instance a score of 10 and 30
 do not average 20. 10 stands for :math:`\frac{1}{10^{1.0}}=0.1` and 30 for
@@ -31,7 +31,7 @@ formula. Starting with the formula for a single ASCII character.
 
 .. math::
 
-    P(x) = 10^{ (x - offset)/ -10}
+    P(x) = 10^{ \frac{x-offset}{-10}}
 
 Where offset is the Phred offset. (+33 is added to the phred scores to push them
 into the ASCII printable range).
@@ -41,7 +41,7 @@ take the sum of all the probabilities and divide it by the number of characters:
 
 .. math::
 
-    P_{average} = \frac{1}{n}  \sum_{i=1}^{n}{10^{ (a_i - offset)/ -10}}
+    P_{average} = \frac{1}{n}  \sum_{i=1}^{n}{10^{ \frac{a_i - offset}{-10}}}
 
 To calculate the phred score for the average P.
 
@@ -53,7 +53,7 @@ The entire formula for calculating the average phred score from the base qualiti
 
 .. math::
 
-    Phred_{average} = - 10 * ^{10}log\left(\frac{1}{n}  \sum_{i=1}^{n}{10^{ (a_i - offset)/ -10}}\right)
+    Phred_{average} = - 10 * ^{10}log\left(\frac{1}{n}  \sum_{i=1}^{n}{10^{ \frac{a_i - offset}{-10}}}\right)
 
 It can be implemented in python with numpy as follows:
 
@@ -76,7 +76,7 @@ This requires three operations on the array containing the quality scores.
 
 We can simplify the formula to reduce the number of calculations. We can
 use the following math rule :math:`a^{pq}=(a^p)^q` to remove the division by
--10. This is the same as multiplying with -0.1. We can write :math:`10^{(a_i - offset)/ -10}`
+-10. This is the same as multiplying with -0.1. We can write :math:`10^{\frac{a_i - offset}{-10}}`
 as :math:`\left(10^{-\frac{1}{10}}\right)^{a_i - offset}`. Where we can
 calculate :math:`10^{-\frac{1}{10}}` first as a constant C. Reducing the number of total calculations.
 
@@ -138,8 +138,7 @@ It can be implemented as follows in python:
     import math
     import numpy as np
 
-    def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-                 ) -> float:
+    def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
         phred_scores = np.frombuffer(qualities, dtype=np.int8)
         probabilities = np.power((10 ** -0.1), phred_scores)
         average = np.average(probabilities)
