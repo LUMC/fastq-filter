@@ -94,21 +94,18 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset
         """
     ),
-    "Oneliner": textwrap.dedent(
+    "Use np.mean": textwrap.dedent(
         """
         import math
         import numpy as np
-    
+
         PHRED_CONSTANT = 10 ** -0.1
-    
+
         def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
-            return -10 * math.log10(
-                np.average(
-                    np.power(PHRED_CONSTANT, 
-                                np.frombuffer(qualities, dtype=np.int8)
-                            )
-                        )
-                    ) - phred_offset
+            phred_scores = np.frombuffer(qualities, dtype=np.int8)
+            probabilities = np.power(PHRED_CONSTANT, phred_scores)
+            average = np.mean(probabilities)
+            return -10 * math.log10(average) - phred_offset
         """
     ),
 }
