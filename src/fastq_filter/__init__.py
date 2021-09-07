@@ -20,6 +20,7 @@
 import argparse
 import functools
 import math
+import sys
 import typing
 from typing import Callable, Generator, List
 
@@ -132,9 +133,12 @@ def argument_parser() -> argparse.ArgumentParser():
     parser.add_argument("input",
                         help="Input FASTQ file. Compression format "
                              "automatically detected. ")
-    parser.add_argument("output",
+    parser.add_argument("-o", "--output",
+                        default=(None if sys.platform.startswith("win")
+                                 else "/dev/stdout"),
                         help="Output FASTQ file. Compression format "
-                             "automatically determined by file extension.")
+                             "automatically determined by file extension. "
+                             "Default: stdout.")
     return parser
 
 
