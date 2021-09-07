@@ -33,6 +33,7 @@ DEFAULT_PHRED_SCORE_OFFSET = 33
 
 
 class FastqRecord(typing.NamedTuple):
+    """Presents a FASTQ record as a tuple of bytestrings."""
     name: bytes
     sequence: bytes
     plus: bytes
@@ -40,6 +41,7 @@ class FastqRecord(typing.NamedTuple):
 
 
 def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
+    """Parse a FASTQ file into a generator of FastqRecord namedtuples"""
     with xopen.xopen(filepath, "rb", threads=0) as file_h:
         while True:
             name = file_h.readline()
@@ -65,6 +67,10 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
 
 def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
              ) -> float:
+    """
+    Calculate the average phred score from a raw FASTQ quality string taking
+    into account the fact that phred scores are log units.
+    """
     phred_scores = np.frombuffer(qualities, dtype=np.int8)
     probabilities = np.power((10 ** -0.1), phred_scores)
     average = np.average(probabilities)
@@ -73,23 +79,32 @@ def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
 
 def qualmedian(qualites: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
                ) -> float:
+    """Calculate the median phred score from a raw FASTQ quality string."""
     phred_scores = np.frombuffer(qualites, dtype=np.int8)
     return np.median(phred_scores) - phred_offset
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
+    """Checks whether the mean quality of the FASTQ record is equal or above
+    the given quality value."""
     return qualmean(record.qualities) >= quality
 
 
 def median_quality_filter(quality: int, record: FastqRecord) -> bool:
+    """Checks whether the median quality of the FASTQ record is equal or above
+    the given quality value."""
     return qualmean(record.qualities) >= quality
 
 
 def min_length_filter(min_length: int, record: FastqRecord) -> bool:
+    """Checks whether the length of the sequence in the FASTQ record is at
+    least min_length"""
     return len(record.sequence) >= min_length
 
 
 def max_length_filter(max_length: int, record: FastqRecord) -> bool:
+    """Checks whether the length of the sequence in the FASTQ record is at
+    most max_length"""
     return len(record.sequence) <= max_length
 
 
@@ -104,6 +119,9 @@ FILTERS = {"mean_quality": (mean_quality_filter, (float,)),
 
 def filter_string_to_filters(filter_string: str
                              ) -> List[Callable[[FastqRecord], bool]]:
+    """Convert a filter string such as 'min_length:50|mean_quality:20 into
+    a list of filter functions that can be used by Python's builtin filter
+    function."""
     filters: List[Callable[[FastqRecord], bool]] = []
     for single_filter_string in filter_string.split('|'):
         filter_name, filter_argstring = single_filter_string.split(':')
@@ -121,6 +139,17 @@ def filter_string_to_filters(filter_string: str
 
 
 def filter_fastq(filter_string: str, input_file: str, output_file: str):
+    """
+    Filter a FASTQ input file with the filters in filter_string and write
+    the results to the output file.
+
+    :param filter_string: A string representing one or multiple filters. For
+    more information see the documentation.
+    :param input_file: A FASTQ input filename. Compressed files are handled
+    automatically.
+    :param output_file: A FASTQ output filename. Compressed files are handled
+    automatically.
+    """
     fastq_records = file_to_fastq_records(input_file)
     filtered_fastq_records = fastq_records
     for filter_func in filter_string_to_filters(filter_string):
