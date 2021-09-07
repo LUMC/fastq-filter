@@ -22,7 +22,7 @@ import functools
 import math
 import sys
 import typing
-from typing import Callable, Generator, List
+from typing import Callable, Generator, Iterable, List
 
 import numpy as np
 
@@ -40,7 +40,7 @@ class FastqRecord(typing.NamedTuple):
     qualities: bytes
 
 
-def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
+def file_to_fastq_records(filepath: str) -> Generator[FastqRecord, None, None]:
     """Parse a FASTQ file into a generator of FastqRecord namedtuples"""
     with xopen.xopen(filepath, "rb", threads=0) as file_h:
         while True:
@@ -63,6 +63,12 @@ def file_to_fastq_records(filepath) -> Generator[FastqRecord, None, None]:
                               sequence.rstrip(),
                               plus.rstrip(),
                               qualities.rstrip())
+
+
+def fastq_records_to_file(records: Iterable[FastqRecord], filepath: str):
+    with xopen.xopen(filepath, mode='wb', threads=0) as output_h:
+        for record in records:
+            output_h.write(b"\n".join(record) + b"\n")
 
 
 def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
@@ -156,9 +162,7 @@ def filter_fastq(filter_string: str, input_file: str, output_file: str):
     filtered_fastq_records = fastq_records
     for filter_func in filter_string_to_filters(filter_string):
         filtered_fastq_records = filter(filter_func, filtered_fastq_records)
-    with xopen.xopen(output_file, "wb", threads=0) as output_h:
-        for record in filtered_fastq_records:
-            output_h.write(b"\n".join(record) + b"\n")
+    fastq_records_to_file(filtered_fastq_records, output_file)
 
 
 def argument_parser() -> argparse.ArgumentParser():
