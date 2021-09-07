@@ -20,10 +20,20 @@
 import array
 import math
 import statistics
+from typing import List
 
-from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, qualmean, qualmedian
+from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, mean_quality_filter, \
+    median_quality_filter, max_length_filter, min_length_filter, qualmean, \
+    qualmedian, FastqRecord
 
 import pytest  # type: ignore
+
+
+def quallist_to_bytes(quallist: List[int]):
+    return array.array(
+        "B", [qual + DEFAULT_PHRED_SCORE_OFFSET for qual in quallist]
+    ).tobytes()
+
 
 QUAL_STRINGS = [
     b"I?>DC:>@?IDC9??G?>EH9E@66=9<?@E?DC:@<@BBFG>=FIC@F9>7CG?IC?I;CD9>>>A@C7>>"
@@ -51,3 +61,44 @@ def test_qualmedian(qualstring):
     qualities = [qual - offset for qual in array.array("b", qualstring)]
     median_quality = statistics.median(qualities)
     assert median_quality == pytest.approx(qualmedian(qualstring))
+
+
+def test_min_length_filter_pass():
+    assert min_length_filter(
+        10, FastqRecord(b"", b"0123456789A", b"", b"")) is True
+
+
+def test_min_length_filter_fail():
+    assert min_length_filter(
+        12, FastqRecord(b"", b"0123456789A", b"", b"")) is False
+
+
+def test_max_length_filter_pass():
+    assert max_length_filter(
+        12, FastqRecord(b"", b"0123456789A", b"", b"")) is True
+
+
+def test_max_length_filter_fail():
+    assert max_length_filter(
+        10, FastqRecord(b"", b"0123456789A", b"", b"")) is False
+
+
+def test_mean_quality_filter_fail():
+    assert mean_quality_filter(
+        10, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9]))) is False
+
+
+def test_mean_quality_filter_pass():
+    assert mean_quality_filter(
+        8, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9]))) is True
+
+def test_median_quality_filter_fail():
+    assert median_quality_filter(
+        10, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9, 10, 10]))
+    ) is False
+
+
+def test_median_quality_filter_pass():
+    assert median_quality_filter(
+        8-0.001, FastqRecord(b"", b"", b"", quallist_to_bytes([1, 1, 1, 8, 9, 9, 9]))
+    ) is True

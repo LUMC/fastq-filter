@@ -89,7 +89,7 @@ def qualmedian(qualites: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
                ) -> float:
     """Calculate the median phred score from a raw FASTQ quality string."""
     phred_scores = np.frombuffer(qualites, dtype=np.int8)
-    return np.median(phred_scores) - phred_offset
+    return float(np.median(phred_scores)) - phred_offset
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
@@ -98,7 +98,7 @@ def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
     return qualmean(record.qualities) >= quality
 
 
-def median_quality_filter(quality: int, record: FastqRecord) -> bool:
+def median_quality_filter(quality: float, record: FastqRecord) -> bool:
     """The median quality of the FASTQ record is equal or above the given
     quality value."""
     return qualmedian(record.qualities) >= quality
@@ -118,7 +118,7 @@ def max_length_filter(max_length: int, record: FastqRecord) -> bool:
 # tuple of types so the command line arguments (strings) can be converted
 # in the appropiate types.
 FILTERS = {"mean_quality": (mean_quality_filter, (float,), ("quality",)),
-           "median_quality": (median_quality_filter, (int,), ("quality",)),
+           "median_quality": (median_quality_filter, (float,), ("quality",)),
            "min_length": (min_length_filter, (int,), ("length",)),
            "max_length": (max_length_filter, (int,), ("length",))}
 
