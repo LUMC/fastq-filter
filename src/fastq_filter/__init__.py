@@ -120,6 +120,16 @@ def filter_string_to_filters(filter_string: str
     return filters
 
 
+def filter_fastq(filter_string: str, input_file: str, output_file: str):
+    fastq_records = file_to_fastq_records(input_file)
+    filtered_fastq_records = fastq_records
+    for filter_func in filter_string_to_filters(filter_string):
+        filtered_fastq_records = filter(filter_func, filtered_fastq_records)
+    with xopen.xopen(output_file, "wb", threads=0) as output_h:
+        for record in filtered_fastq_records:
+            output_h.write(b"\n".join(record) + b"\n")
+
+
 def argument_parser() -> argparse.ArgumentParser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -144,13 +154,7 @@ def argument_parser() -> argparse.ArgumentParser():
 
 def main():
     args = argument_parser().parse_args()
-    fastq_records = file_to_fastq_records(args.input)
-    filtered_fastq_records = fastq_records
-    for filter_func in filter_string_to_filters(args.filters):
-        filtered_fastq_records = filter(filter_func, filtered_fastq_records)
-    with xopen.xopen(args.output, "wb", threads=0) as output_h:
-        for record in filtered_fastq_records:
-            output_h.write(b"\n".join(record) + b"\n")
+    filter_fastq(args.filters, args.input, args.output)
 
 
 if __name__ == "__main__":
