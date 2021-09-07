@@ -21,7 +21,7 @@ import argparse
 import functools
 import math
 import typing
-from typing import Generator
+from typing import Callable, Generator, List
 
 import numpy as np
 
@@ -101,19 +101,34 @@ FILTERS = {"mean_quality": (mean_quality_filter, (float,)),
            "max_length": (max_length_filter, (int,))}
 
 
+def filter_string_to_filters(filter_string: str
+                             ) -> List[Callable[[FastqRecord], bool]]:
+    filters: List[Callable[[FastqRecord], bool]] = []
+    for single_filter_string in filter_string.split('|'):
+        filter_name, filter_argstring = single_filter_string.split(':')
+        try:
+            filter_function, filter_argtypes = FILTERS[filter_name]
+        except KeyError:
+            raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
+                             f" {' '.join(FILTERS.keys())}")
+        # Convert the strings from the command line in the appropiate types
+        filter_args = [filter_argtypes[pos](arg) for pos, arg
+                       in enumerate(filter_argstring.split(','))]
+
+        filters.append(functools.partial(filter_function, *filter_args))
+    return filters
+
+
 def argument_parser() -> argparse.ArgumentParser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("filter", nargs="+",
-                        help="Filter and arguments. For example: "
-                             "mean_quality:20, for filtering all reads with "
-                             "an average quality below 20. Available filters: "
-                             "mean_quality:<quality>, "
-                             "median_quality:<quality>, "
-                             "min_length:<length>, "
-                             "max_length:<length>. "
-                             "Multiple filters can be used. Make sure to use "
-                             "faster filters (length) before slower ones "
-                             "(quality) for optimal performance.")
+    parser.add_argument(
+        "filters", nargs="+",
+        help="Filters and arguments. For example: mean_quality:20, for "
+             "filtering all reads with an average quality below 20. Multiple "
+             "filters can be applied by separating with the | symbol. For "
+             "example: min_length:100|mean_quality:20.  Make sure to use "
+             "faster filters (length) before slower ones (quality) for "
+             "optimal performance.")
     parser.add_argument("input",
                         help="Input FASTQ file. Compression format "
                              "automatically detected. ")
@@ -135,12 +150,6 @@ def main():
             raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
                              f" {' '.join(FILTERS.keys())}")
 
-        # Convert the strings from the command line in the appropiate types
-        filter_args = [filter_argtypes[pos](arg) for pos, arg
-                       in enumerate(filter_argstring.split(','))]
-
-        filter_function_with_args = functools.partial(
-            filter_function, *filter_args)
 
         # Add the filter. Due to this setup we can add multiple filters
         filtered_fastq_records = filter(filter_function_with_args,
