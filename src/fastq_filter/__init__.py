@@ -101,7 +101,7 @@ def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
 def median_quality_filter(quality: int, record: FastqRecord) -> bool:
     """Checks whether the median quality of the FASTQ record is equal or above
     the given quality value."""
-    return qualmean(record.qualities) >= quality
+    return qualmedian(record.qualities) >= quality
 
 
 def min_length_filter(min_length: int, record: FastqRecord) -> bool:
