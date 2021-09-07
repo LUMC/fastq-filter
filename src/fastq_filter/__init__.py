@@ -122,7 +122,7 @@ def filter_string_to_filters(filter_string: str
 def argument_parser() -> argparse.ArgumentParser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "filters", nargs="+",
+        "filters",
         help="Filters and arguments. For example: mean_quality:20, for "
              "filtering all reads with an average quality below 20. Multiple "
              "filters can be applied by separating with the | symbol. For "
@@ -142,19 +142,8 @@ def main():
     args = argument_parser().parse_args()
     fastq_records = file_to_fastq_records(args.input)
     filtered_fastq_records = fastq_records
-    for filter_string in args.filter:
-        filter_name, filter_argstring = filter_string.split(':')
-        try:
-            filter_function, filter_argtypes = FILTERS[filter_name]
-        except KeyError:
-            raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
-                             f" {' '.join(FILTERS.keys())}")
-
-
-        # Add the filter. Due to this setup we can add multiple filters
-        filtered_fastq_records = filter(filter_function_with_args,
-                                        filtered_fastq_records)
-
+    for filter_func in filter_string_to_filters(args.filters):
+        filtered_fastq_records = filter(filter_func, filtered_fastq_records)
     with xopen.xopen(args.output, "wb", threads=0) as output_h:
         for record in filtered_fastq_records:
             output_h.write(b"\n".join(record) + b"\n")
