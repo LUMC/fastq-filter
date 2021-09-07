@@ -108,6 +108,19 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset
         """
     ),
+    "Fast python implementation": textwrap.dedent(
+        """
+        import math
+        import array
+    
+        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
+            phred_scores = array.array('b', qualities)
+            phred_constant = 10 ** -0.1
+            probabilities = [phred_constant ** score for score in phred_scores]
+            average = sum(probabilities) / len(qualities)
+            return -10 * math.log10(average) - phred_offset
+        """
+    ),
 }
 
 import timeit
@@ -130,10 +143,4 @@ if __name__ == "__main__":
                   "qualmean(b'GFFAFFFFDEDDEFFFC?FFFFF8FF9FDFEFCDFFFGEDDFCFEFFD"
                   "FFF/FEED?FFF7FFF;FFFEDFEFC8>FCF>EDDEBDA2F@;FFCFFDDEFF@E9FFD"
                   "FFEFFFFFFFFFFFFEBFF?A1GCFFFF=FCFFDGFECEEEDG')",
-                  setup)
-
-    for name, setup in QUALMEAN_CODE.items():
-        benchmark(name,
-                  "qualmean(b'GFFAFFFFDEDDEFFFC?FFFFF8FF9FDFEFCDFFFGEDDFCFEFFD"
-                  "')",
                   setup)
