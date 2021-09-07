@@ -93,36 +93,44 @@ def qualmedian(qualites: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
-    """Checks whether the mean quality of the FASTQ record is equal or above
-    the given quality value."""
+    """The mean quality of the FASTQ record is equal or above the given
+    quality value."""
     return qualmean(record.qualities) >= quality
 
 
 def median_quality_filter(quality: int, record: FastqRecord) -> bool:
-    """Checks whether the median quality of the FASTQ record is equal or above
-    the given quality value."""
+    """The median quality of the FASTQ record is equal or above the given
+    quality value."""
     return qualmedian(record.qualities) >= quality
 
 
 def min_length_filter(min_length: int, record: FastqRecord) -> bool:
-    """Checks whether the length of the sequence in the FASTQ record is at
-    least min_length"""
+    """The length of the sequence in the FASTQ record is at least min_length"""
     return len(record.sequence) >= min_length
 
 
 def max_length_filter(max_length: int, record: FastqRecord) -> bool:
-    """Checks whether the length of the sequence in the FASTQ record is at
-    most max_length"""
+    """The length of the sequence in the FASTQ record is at most max_length"""
     return len(record.sequence) <= max_length
 
 
 # Store filter names for use on the command line interface. Also store a
 # tuple of types so the command line arguments (strings) can be converted
 # in the appropiate types.
-FILTERS = {"mean_quality": (mean_quality_filter, (float,)),
-           "median_quality": (median_quality_filter, (int,)),
-           "min_length": (min_length_filter, (int,)),
-           "max_length": (max_length_filter, (int,))}
+FILTERS = {"mean_quality": (mean_quality_filter, (float,), ("quality",)),
+           "median_quality": (median_quality_filter, (int,), ("quality",)),
+           "min_length": (min_length_filter, (int,), ("length",)),
+           "max_length": (max_length_filter, (int,), ("length",))}
+
+
+def print_filter_help():
+    for filter_name, filter_tuple in FILTERS.items():
+        filter_func, _, arg_names = filter_tuple
+        # Reuse the docstring for the filter explanation.
+        # Convert all whitespace in docstring to space.
+        filter_usage = f"{filter_name}:<{'>,<'.join(arg_names)}>"
+        filter_explanation = " ".join(filter_func.__doc__.split())
+        print(f"{filter_usage:<30} {filter_explanation}")
 
 
 def filter_string_to_filters(filter_string: str
@@ -134,7 +142,7 @@ def filter_string_to_filters(filter_string: str
     for single_filter_string in filter_string.split('|'):
         filter_name, filter_argstring = single_filter_string.split(':')
         try:
-            filter_function, filter_argtypes = FILTERS[filter_name]
+            filter_function, filter_argtypes, _ = FILTERS[filter_name]
         except KeyError:
             raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
                              f" {' '.join(FILTERS.keys())}")
@@ -174,10 +182,13 @@ def argument_parser() -> argparse.ArgumentParser():
              "filters can be applied by separating with the | symbol. For "
              "example: min_length:100|mean_quality:20.  Make sure to use "
              "faster filters (length) before slower ones (quality) for "
-             "optimal performance.")
+             "optimal performance. Use --help-filters to print all the "
+             "available filters.")
     parser.add_argument("input",
                         help="Input FASTQ file. Compression format "
                              "automatically detected. ")
+    parser.add_argument("--help-filters", action="store_true",
+                        help="Print all the available filters.")
     parser.add_argument("-o", "--output",
                         default=(None if sys.platform.startswith("win")
                                  else "/dev/stdout"),
@@ -188,6 +199,9 @@ def argument_parser() -> argparse.ArgumentParser():
 
 
 def main():
+    if "--help-filters" in sys.argv[1:]:
+        print_filter_help()
+        sys.exit(0)
     args = argument_parser().parse_args()
     filter_fastq(args.filters, args.input, args.output)
 
