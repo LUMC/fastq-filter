@@ -21,9 +21,9 @@ import array
 import math
 import statistics
 
-from fastq_filter import qualmean, qualmedian, DEFAULT_PHRED_SCORE_OFFSET
+from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, qualmean, qualmedian
 
-import pytest
+import pytest  # type: ignore
 
 QUAL_STRINGS = [
     b"I?>DC:>@?IDC9??G?>EH9E@66=9<?@E?DC:@<@BBFG>=FIC@F9>7CG?IC?I;CD9>>>A@C7>>"
@@ -33,6 +33,7 @@ QUAL_STRINGS = [
     b"?;:>I3DB<?<B=?A??CI>2E>><BD?A??FCBCE?DAI><B:8D>?C>@BA=F<>7=E=?DC=@9GG=>?"
     b"C@><CA;>",
 ]
+
 
 @pytest.mark.parametrize("qualstring", QUAL_STRINGS)
 def test_qualmean(qualstring):

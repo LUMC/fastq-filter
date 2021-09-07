@@ -26,7 +26,7 @@ from typing import Callable, Generator, Iterable, List
 
 import numpy as np
 
-import xopen
+import xopen  # type: ignore
 
 
 DEFAULT_PHRED_SCORE_OFFSET = 33
@@ -167,13 +167,13 @@ def filter_fastq(filter_string: str, input_file: str, output_file: str):
     automatically.
     """
     fastq_records = file_to_fastq_records(input_file)
-    filtered_fastq_records = fastq_records
+    filtered_fastq_records: Iterable[FastqRecord] = fastq_records
     for filter_func in filter_string_to_filters(filter_string):
         filtered_fastq_records = filter(filter_func, filtered_fastq_records)
     fastq_records_to_file(filtered_fastq_records, output_file)
 
 
-def argument_parser() -> argparse.ArgumentParser():
+def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "filters",
