@@ -71,6 +71,8 @@ def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
     Calculate the average phred score from a raw FASTQ quality string taking
     into account the fact that phred scores are log units.
     """
+    # For the correctness of the below formula please check
+    # https://github.com/LUMC/fastq-filter/blob/d2e99ab5f15f68dbf9aa470e7d845b44c89d9bdd/deriving_mean_quality.pdf
     phred_scores = np.frombuffer(qualities, dtype=np.int8)
     probabilities = np.power((10 ** -0.1), phred_scores)
     average = np.average(probabilities)
