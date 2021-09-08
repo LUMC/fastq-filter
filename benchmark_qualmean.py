@@ -121,6 +121,20 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset
         """
     ),
+    "Fast python implementation2": textwrap.dedent(
+        """
+        import math
+        import array
+    
+        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
+            phred_constant = 10 ** -0.1
+            sum_probabilities = 0.0
+            for score in qualities:
+                sum_probabilities += phred_constant ** score
+            average = sum_probabilities / len(qualities)
+            return -10 * math.log10(average) - phred_offset  
+        """
+    ),
 }
 QUALMEDIAN_CODE = {
     "Median python implementation": textwrap.dedent(
@@ -132,14 +146,6 @@ QUALMEDIAN_CODE = {
             phred_scores = array.array('b', qualities)
             return statistics.median(phred_scores) - phred_offset
         """),
-    "Median numpy implementation": textwrap.dedent(
-        """
-        import numpy as np
-    
-        def qualmedian(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = np.frombuffer(qualities, dtype=np.int8)
-            return np.median(phred_scores) - phred_offset
-        """),
     "Median numpy implementation with float": textwrap.dedent(
         """
         import numpy as np
@@ -147,6 +153,27 @@ QUALMEDIAN_CODE = {
         def qualmedian(qualities: bytes, phred_offset: int = 33) -> float:
             phred_scores = np.frombuffer(qualities, dtype=np.int8)
             return float(np.median(phred_scores)) - phred_offset
+        """),
+    "Median simple python implementation": textwrap.dedent(
+        """
+        import statistics
+        import array
+    
+        def qualmedian(qualities: bytes, phred_offset: int = 33) -> float:
+            return statistics.median(qualities) - phred_offset
+        """),
+    "Adaptive implementation": textwrap.dedent(
+        """
+        import statistics
+        import array
+        import numpy as np
+    
+        def qualmedian(qualities: bytes, phred_offset: int = 33) -> float:
+            if len(qualities) < 500:
+                return statistics.median(qualities) - phred_offset
+            else:
+                phred_scores = np.frombuffer(qualities, dtype=np.int8)
+                return float(np.median(phred_scores)) - phred_offset
         """),
 }
 
@@ -177,6 +204,6 @@ if __name__ == "__main__":
         benchmark(name,
                   "qualmedian(b'GFFAFFFFDEDDEFFFC?FFFFF8FF9FDFEFCDFFFGEDDFCFEF"
                   "FDFFF/FEED?FFF7FFF;FFFEDFEFC8>FCF>EDDEBDA2F@;FFCFFDDEFF@E9F"
-                  "FDFFEFFFFFFFFFFFFEBFF?A1GCFFFF=FCFFDGFECEEEDG')",
+                  "FDFFEFFFFFFFFFFFFEBFF?A1GCFFFF=FCFFDGFECEEEDG'*4)",
                   setup)
 
