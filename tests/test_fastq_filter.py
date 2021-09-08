@@ -20,8 +20,11 @@
 import array
 import math
 import statistics
+import sys
+import textwrap
 from typing import List
 
+import fastq_filter
 from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, mean_quality_filter, \
     median_quality_filter, max_length_filter, min_length_filter, qualmean, \
     qualmedian, FastqRecord
@@ -102,3 +105,39 @@ def test_median_quality_filter_pass():
     assert median_quality_filter(
         8-0.001, FastqRecord(b"", b"", b"", quallist_to_bytes([1, 1, 1, 8, 9, 9, 9]))
     ) is True
+
+
+def test_fastq_records_to_file(tmp_path):
+    records = [FastqRecord(b"@TEST", b"A", b"+", b"A")] * 3
+    out = tmp_path / "test.fq"
+    fastq_filter.fastq_records_to_file(records, str(out))
+    assert out.read_bytes() == b"@TEST\nA\n+\nA\n" \
+                               b"@TEST\nA\n+\nA\n" \
+                               b"@TEST\nA\n+\nA\n"
+
+
+def test_file_to_fastq_records(tmp_path):
+    out = tmp_path / "test.fq"
+    out.write_bytes(b"@TEST\nA\n+\nA\n@TEST\nA\n+\nA\n@TEST\nA\n+\nA\n")
+    assert list(fastq_filter.file_to_fastq_records(str(out))) == [
+        FastqRecord(b"@TEST", b"A", b"+", b"A")] * 3
+
+
+def test_filter_fastq(tmp_path):
+    in_f = tmp_path / "in.fq"
+    out_f = tmp_path / "out.fq"
+    in_f.write_bytes(b"@TEST\nAA\n+\nAA\n@TEST\nA\n+\n-\n@TEST\nA\n+\nA\n")
+    fastq_filter.filter_fastq(
+        "mean_quality:20|min_length:2", str(in_f), str(out_f))
+    # Only one record should survive the filter.
+    assert out_f.read_bytes() == b"@TEST\nAA\n+\nAA\n"
+
+
+def test_main(tmp_path):
+    in_f = tmp_path / "in.fq"
+    out_f = tmp_path / "out.fq"
+    in_f.write_bytes(b"@TEST\nAA\n+\nAA\n@TEST\nA\n+\n-\n@TEST\nA\n+\nA\n")
+    sys.argv = ["", "-o", str(out_f), "mean_quality:20|min_length:2",
+                str(in_f)]
+    fastq_filter.main()
+    assert out_f.read_bytes() == b"@TEST\nAA\n+\nAA\n"
