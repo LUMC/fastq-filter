@@ -135,6 +135,11 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset  
         """
     ),
+    "Cython implementation": textwrap.dedent(
+        """
+        from fastq_filter._optimize import qualmean
+        """
+    ),
 }
 QUALMEDIAN_CODE = {
     "Median python implementation": textwrap.dedent(
