@@ -20,6 +20,7 @@
 import argparse
 import functools
 import math
+import statistics
 import sys
 import typing
 from typing import Callable, Generator, Iterable, List
@@ -85,10 +86,14 @@ def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
     return -10 * math.log10(average) - phred_offset
 
 
-def qualmedian(qualites: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
+def qualmedian(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
                ) -> float:
     """Calculate the median phred score from a raw FASTQ quality string."""
-    phred_scores = np.frombuffer(qualites, dtype=np.int8)
+    if len(qualities) < 500:
+        return statistics.median(qualities) - phred_offset
+    # Numpy has a lot of overhead. Python is usually faster, unless the quality
+    # string is quite large and the numpy SIMD advantage kicks in.
+    phred_scores = np.frombuffer(qualities, dtype=np.int8)
     return float(np.median(phred_scores)) - phred_offset
 
 
