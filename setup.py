@@ -17,10 +17,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import warnings
 from pathlib import Path
 
-from setuptools import find_packages, setup
+from setuptools import Extension, find_packages, setup
+from setuptools.command.build_ext import build_ext
+
+try:
+    from Cython.Build import cythonize
+    EXT_MODULES = cythonize(
+        Extension("fastq_filter.optimized_algorithms",
+                  ["src/fastq_filter/optimized_algorithms.pyx"]),
+        compiler_directives=dict(language_level="3", binding=True,
+                                 cdivision=True))
+except ImportError:
+    EXT_MODULES = []
+
+
+class BuildExtMayFail(build_ext):
+    def build_extension(self, ext):
+        try:
+            super().build_extension(ext)
+        except Exception as e:
+            warnings.warn(f"Unable to build extension. This installation will "
+                          f"use python fallback algorithms. Error {str(e)}")
+
 
 LONG_DESCRIPTION = Path("README.rst").read_text()
 
@@ -37,6 +58,7 @@ setup(
     zip_safe=False,
     packages=find_packages('src'),
     package_dir={'': 'src'},
+    ext_modules=EXT_MODULES,
     url="https://github.com/lumc/fastq-flter",
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
