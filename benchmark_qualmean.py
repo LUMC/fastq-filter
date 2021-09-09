@@ -44,6 +44,18 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset
         """
     ),
+    "Numpy: Factored and float32": textwrap.dedent(
+        """
+        import math
+        import numpy as np
+    
+        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
+            phred_scores = np.frombuffer(qualities, dtype=np.int8)
+            probabilities = np.power((10 ** -0.1), phred_scores, dtype=np.float32)
+            average = np.average(probabilities)
+            return -10 * math.log10(average) - phred_offset
+        """
+    ),
     "Fast pure python implementation": textwrap.dedent(
         """
         import math
