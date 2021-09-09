@@ -28,9 +28,14 @@ def qualmean(bytes qualities, double phred_offset = 33):
     Returns the mean of the quality scores in an ASCII quality string as stored
     in a FASTQ file. Returns a float value.
     """
-    cdef double phred_constant = 10 ** -0.1
-    cdef double sum_probabilities = 0.0
-    cdef double average
+    # All intermediate calculations are calculated with single precision as
+    # this saves a double power (**) and double addition calculation.
+    # This is 4 times faster on the PC of this developer.
+    # For the average_phred, double values are used since Python uses doubles
+    # internally and this prevents casting.
+    cdef float phred_constant = 10 ** -0.1
+    cdef float sum_probabilities = 0.0
+    cdef float average
     cdef double average_phred
     cdef Py_buffer buffer_data
     cdef Py_buffer* buffer = &buffer_data
@@ -43,7 +48,7 @@ def qualmean(bytes qualities, double phred_offset = 33):
         for i in range(buffer.len):
             sum_probabilities += phred_constant ** scores[i]
         average = sum_probabilities / buffer.len
-        average_phred = -10 * log10(average) - phred_offset
+        average_phred = -10 * log10(<double>average) - phred_offset
         return average_phred
     finally:
         PyBuffer_Release(buffer)
