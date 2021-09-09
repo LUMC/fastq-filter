@@ -20,19 +20,7 @@
 
 import textwrap
 QUALMEAN_CODE = {
-    "Naive setup with np.log10": textwrap.dedent(
-        """
-        import math
-        import numpy as np
-        
-        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = np.frombuffer(qualities, dtype=np.int8)
-            probabilities = np.power(10, ((phred_scores - phred_offset) / -10))
-            average = np.average(probabilities)
-            return -10 * np.log10(average)
-        """
-    ),
-    "Naive setup with math.log10": textwrap.dedent(
+    "Numpy: Naive setup with math.log10": textwrap.dedent(
         """
         import math
         import numpy as np
@@ -44,31 +32,7 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average)
         """
     ),
-    "Use * -0.1 instead of division": textwrap.dedent(
-        """
-        import math
-        import numpy as np
-    
-        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = np.frombuffer(qualities, dtype=np.int8)
-            probabilities = np.power(10, ((phred_scores - phred_offset) * -0.1))
-            average = np.average(probabilities)
-            return -10 * math.log10(average)
-        """
-    ),
-    "Factor out the -0.1": textwrap.dedent(
-        """
-        import math
-        import numpy as np
-    
-        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = np.frombuffer(qualities, dtype=np.int8)
-            probabilities = np.power((10 ** -0.1), ((phred_scores - phred_offset)))
-            average = np.average(probabilities)
-            return -10 * math.log10(average)
-        """
-    ),
-    "Factor out the phred offset": textwrap.dedent(
+    "Numpy: Factor out the phred offset and the /-10": textwrap.dedent(
         """
         import math
         import numpy as np
@@ -80,48 +44,7 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset
         """
     ),
-    "Use constant": textwrap.dedent(
-        """
-        import math
-        import numpy as np
-        
-        PHRED_CONSTANT = 10 ** -0.1
-    
-        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = np.frombuffer(qualities, dtype=np.int8)
-            probabilities = np.power(PHRED_CONSTANT, phred_scores)
-            average = np.average(probabilities)
-            return -10 * math.log10(average) - phred_offset
-        """
-    ),
-    "Use python mean": textwrap.dedent(
-        """
-        import math
-        import numpy as np
-
-        PHRED_CONSTANT = 10 ** -0.1
-
-        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = np.frombuffer(qualities, dtype=np.int8)
-            probabilities = np.power(PHRED_CONSTANT, phred_scores)
-            average = sum(probabilities) / len(probabilities)
-            return -10 * math.log10(average) - phred_offset
-        """
-    ),
-    "Fast python implementation": textwrap.dedent(
-        """
-        import math
-        import array
-    
-        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = array.array('B', qualities)
-            phred_constant = 10 ** -0.1
-            probabilities = [phred_constant ** score for score in phred_scores]
-            average = sum(probabilities) / len(qualities)
-            return -10 * math.log10(average) - phred_offset
-        """
-    ),
-    "Fast python implementation2": textwrap.dedent(
+    "Fast pure python implementation": textwrap.dedent(
         """
         import math
         import array
@@ -137,20 +60,11 @@ QUALMEAN_CODE = {
     ),
     "Cython implementation": textwrap.dedent(
         """
-        from fastq_filter._optimize import qualmean
+        from fastq_filter.optimized_algorithms import qualmean
         """
     ),
 }
 QUALMEDIAN_CODE = {
-    "Median python implementation": textwrap.dedent(
-        """
-        import statistics
-        import array
-    
-        def qualmedian(qualities: bytes, phred_offset: int = 33) -> float:
-            phred_scores = array.array('b', qualities)
-            return statistics.median(phred_scores) - phred_offset
-        """),
     "Median numpy implementation with float": textwrap.dedent(
         """
         import numpy as np
