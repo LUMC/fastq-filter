@@ -20,13 +20,13 @@
 
 from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_C_CONTIGUOUS
 
-from libc.stdint cimport uint8_t, uint_fast32_t
+from libc.stdint cimport uint8_t, uint32_t
 from libc.math cimport log10
 
 from .constants import DEFAULT_PHRED_SCORE_OFFSET
 
 
-def qualmean(bytes qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
+def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     """
     Returns the mean of the quality scores in an ASCII quality string as stored
     in a FASTQ file. Returns a float value.
@@ -53,5 +53,54 @@ def qualmean(bytes qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
         average = sum_probabilities / buffer.len
         average_phred = -10 * log10(<double>average) - phred_offset
         return average_phred
+    finally:
+        PyBuffer_Release(buffer)
+
+
+def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
+    """
+    Returns the mean of the quality scores in an ASCII quality string as stored
+    in a FASTQ file. Returns a float value.
+    """
+    # All intermediate calculations are calculated with single precision as
+    # this saves a double power (**) and double addition calculation.
+    # This is 4 times faster on the PC of this developer.
+    # For the average_phred, double values are used since Python uses doubles
+    # internally and this prevents casting.
+    cdef uint32_t[128] counts = [0] * 128
+    cdef uint32_t total = 0
+    cdef Py_buffer buffer_data
+    cdef Py_buffer* buffer = &buffer_data
+    # Cython makes sure error is handled when acquiring buffer fails.
+    PyObject_GetBuffer(qualities, buffer, PyBUF_C_CONTIGUOUS)
+    cdef uint8_t *scores = <uint8_t *>buffer.buf
+    cdef uint32_t half
+    cdef bint odd
+    try:
+        print(counts)
+        if buffer.len == 0:
+            raise ValueError("Empty quality string")
+        odd = buffer.len % 2
+        if odd:
+            half = buffer.len // 2
+        else:
+            half = buffer.len // 2 - 1
+        for i in range(buffer.len):
+            counts[scores[i]] += 1
+        print(counts)
+        for i in range(phred_offset, 126):
+            total += counts[i]
+            if total >= half:
+                if odd:
+                    return i - phred_offset
+                else:
+                    if total > half:
+                        return i - phred_offset
+                    else:
+                        for j in range(i + 1, 126):
+                            if counts[j] > 0:
+                                return ((i + j) / 2 - phred_offset)
+        raise RuntimeError("Unable to find median. This is an error in the "
+                           "code. Please contact the developers.")
     finally:
         PyBuffer_Release(buffer)
