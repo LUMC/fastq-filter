@@ -21,6 +21,7 @@
 from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_C_CONTIGUOUS
 
 from libc.stdint cimport uint8_t, uint32_t
+from libc.string cimport memset
 from libc.math cimport log10
 
 from .constants import DEFAULT_PHRED_SCORE_OFFSET
@@ -40,6 +41,7 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     cdef float sum_probabilities = 0.0
     cdef float average
     cdef double average_phred
+    cdef int i
     cdef Py_buffer buffer_data
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
@@ -67,15 +69,20 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # This is 4 times faster on the PC of this developer.
     # For the average_phred, double values are used since Python uses doubles
     # internally and this prevents casting.
-    cdef uint32_t[128] counts = [0] * 128
+    cdef uint32_t[128] counts
+    # Set all counts to zero
+    memset(&counts, 0, 512)
     cdef uint32_t total = 0
     cdef Py_buffer buffer_data
+    cdef uint32_t half
+    cdef bint odd
+    cdef int i
+    cdef int j
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
     PyObject_GetBuffer(qualities, buffer, PyBUF_C_CONTIGUOUS)
     cdef uint8_t *scores = <uint8_t *>buffer.buf
-    cdef uint32_t half
-    cdef bint odd
+
     try:
         if buffer.len == 0:
             raise ValueError("Empty quality string")
@@ -97,7 +104,7 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
                     else:
                         for j in range(i + 1, 127):
                             if counts[j] > 0:
-                                return ((i + j) / 2 - phred_offset)
+                                return (<double>(i + j) / 2 - <double>phred_offset)
         raise RuntimeError("Unable to find median. This is an error in the "
                            "code. Please contact the developers.")
     finally:
