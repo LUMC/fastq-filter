@@ -21,11 +21,15 @@
 import math
 import statistics
 
+from typing import Union
+
 from .constants import DEFAULT_PHRED_SCORE_OFFSET
 
 
 def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
              ) -> float:
+    """Returns the median of the quality scores in an ASCII quality string as
+    stored in a FASTQ file."""
     phred_constant = 10 ** -0.1
     sum_probabilities = 0.0
     for score in qualities:
@@ -35,6 +39,7 @@ def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
 
 
 def qualmedian(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-               ) -> float:
-    """Calculate the median phred score from a raw FASTQ quality string."""
+               ) -> Union[int, float]:
+    """Returns the median of the quality scores in an ASCII quality string as
+    stored in a FASTQ file."""
     return statistics.median(qualities) - phred_offset

@@ -25,12 +25,10 @@ from typing import Callable, Generator, Iterable, List
 
 import xopen  # type: ignore
 
-from .fallback_algorithms import qualmedian
-
 try:
-    from .optimized_algorithms import qualmean
+    from .optimized_algorithms import qualmean, qualmedian
 except ImportError:
-    from .fallback_algorithms import qualmean
+    from .fallback_algorithms import qualmean, qualmedian
 
 
 class FastqRecord(typing.NamedTuple):
