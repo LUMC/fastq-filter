@@ -78,7 +78,7 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # array where half or over half of the values have been counted.
 
     cdef uint32_t[128] counts
-    # Set all counts to zero
+    # Set all counts to zero, this is not done on initialization.
     memset(&counts, 0, 512)  # uint32_t is 4 bytes wide. 4x128=512
     cdef uint32_t total = 0
     cdef Py_buffer buffer_data
