@@ -33,7 +33,7 @@ Fastq-filter can also chain filters together:
 
 .. code-block::
 
-    fastq-filter min_length:100|mean_quality:20 my.fastq
+    fastq-filter 'min_length:100|mean_quality:20' my.fastq
 
 It is advisible to put the fastest filters (length) before the slower ones
 (quality) to optimize performance.
