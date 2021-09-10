@@ -30,7 +30,7 @@ from .constants import DEFAULT_PHRED_SCORE_OFFSET
 def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     """
     Returns the mean of the quality scores in an ASCII quality string as stored
-    in a FASTQ file. Returns a float value.
+    in a FASTQ file.
     """
     # All intermediate calculations are calculated with single precision as
     # this saves a double power (**) and double addition calculation.
@@ -61,14 +61,22 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
 
 def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     """
-    Returns the mean of the quality scores in an ASCII quality string as stored
-    in a FASTQ file. Returns a float value.
+    Returns the median of the quality scores in an ASCII quality string as
+    stored in a FASTQ file.
     """
-    # All intermediate calculations are calculated with single precision as
-    # this saves a double power (**) and double addition calculation.
-    # This is 4 times faster on the PC of this developer.
-    # For the average_phred, double values are used since Python uses doubles
-    # internally and this prevents casting.
+
+    # To calculate the median this implements half a counting sort:
+    # https://en.wikipedia.org/wiki/Counting_sort
+    # This is the fastest sort if there is a limited number of discrete values.
+    # The complexity is O(n+k) where n is the length of the quality array and
+    # k the number of values. Which equals 126 - phred_offset.
+    # In counting sort usually a key converter function is needed, but the
+    # phred scores themselves can be used as indexes for the count array here.
+
+    # Unlike a counting sort, we are not interested in the actual sorted array
+    # only the median. We find the median by finding the point in the counts
+    # array where half or over half of the values have been counted.
+
     cdef uint32_t[128] counts
     # Set all counts to zero
     memset(&counts, 0, 512)
@@ -86,24 +94,33 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     try:
         if buffer.len == 0:
             raise ValueError("Empty quality string")
+
         odd = buffer.len % 2
         if odd:
+            # If len = 49, we have reached the middle value at count 25
             half = buffer.len // 2 + 1
         else:
+            # If len = 50, we have reached the first of the two middle values
+            # at count 25
             half = buffer.len // 2
+
+        # Create the counts histogram
         for i in range(buffer.len):
             counts[scores[i]] += 1
+
+        # Check at which value of i, we have counted half of the values.
         for i in range(phred_offset, 127):
             total += counts[i]
             if total >= half:
                 if odd:
                     return i - phred_offset
                 else:
-                    if total > half:
+                    if total > half:  # The two middle values were the same.
                         return i - phred_offset
-                    else:
+                    else:  # The highest middle value is higher than i.
                         for j in range(i + 1, 127):
                             if counts[j] > 0:
+                                # Cast to double to prevent integer scores here.
                                 return (<double>(i + j) / 2 - <double>phred_offset)
         raise RuntimeError("Unable to find median. This is an error in the "
                            "code. Please contact the developers.")
