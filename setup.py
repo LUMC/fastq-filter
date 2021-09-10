@@ -58,6 +58,7 @@ setup(
     zip_safe=False,
     packages=find_packages('src'),
     package_dir={'': 'src'},
+    package_data={'fastq_filter': ['*.pyx', '*.pyi']},
     ext_modules=EXT_MODULES,
     url="https://github.com/lumc/fastq-flter",
     classifiers=[
