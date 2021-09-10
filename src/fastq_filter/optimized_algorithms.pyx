@@ -77,18 +77,16 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     cdef uint32_t half
     cdef bint odd
     try:
-        print(counts)
         if buffer.len == 0:
             raise ValueError("Empty quality string")
         odd = buffer.len % 2
         if odd:
-            half = buffer.len // 2
+            half = buffer.len // 2 + 1
         else:
-            half = buffer.len // 2 - 1
+            half = buffer.len // 2
         for i in range(buffer.len):
             counts[scores[i]] += 1
-        print(counts)
-        for i in range(phred_offset, 126):
+        for i in range(phred_offset, 127):
             total += counts[i]
             if total >= half:
                 if odd:
@@ -97,7 +95,7 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
                     if total > half:
                         return i - phred_offset
                     else:
-                        for j in range(i + 1, 126):
+                        for j in range(i + 1, 127):
                             if counts[j] > 0:
                                 return ((i + j) / 2 - phred_offset)
         raise RuntimeError("Unable to find median. This is an error in the "
