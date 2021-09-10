@@ -19,18 +19,18 @@
 # SOFTWARE.
 import argparse
 import functools
-import math
-import statistics
 import sys
 import typing
 from typing import Callable, Generator, Iterable, List
 
-import numpy as np
-
 import xopen  # type: ignore
 
+from .fallback_algorithms import qualmedian
 
-DEFAULT_PHRED_SCORE_OFFSET = 33
+try:
+    from .optimized_algorithms import qualmean
+except ImportError:
+    from .fallback_algorithms import qualmean
 
 
 class FastqRecord(typing.NamedTuple):
@@ -70,31 +70,6 @@ def fastq_records_to_file(records: Iterable[FastqRecord], filepath: str):
     with xopen.xopen(filepath, mode='wb', threads=0) as output_h:
         for record in records:
             output_h.write(b"\n".join(record) + b"\n")
-
-
-def qualmean(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-             ) -> float:
-    """
-    Calculate the average phred score from a raw FASTQ quality string taking
-    into account the fact that phred scores are log units.
-    """
-    # For the correctness of the below formula please check
-    # https://github.com/LUMC/fastq-filter/blob/d2e99ab5f15f68dbf9aa470e7d845b44c89d9bdd/deriving_mean_quality.pdf
-    phred_scores = np.frombuffer(qualities, dtype=np.int8)
-    probabilities = np.power((10 ** -0.1), phred_scores)
-    average = np.average(probabilities)
-    return -10 * math.log10(average) - phred_offset
-
-
-def qualmedian(qualities: bytes, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-               ) -> float:
-    """Calculate the median phred score from a raw FASTQ quality string."""
-    if len(qualities) < 500:
-        return statistics.median(qualities) - phred_offset
-    # Numpy has a lot of overhead. Python is usually faster, unless the quality
-    # string is quite large and the numpy SIMD advantage kicks in.
-    phred_scores = np.frombuffer(qualities, dtype=np.int8)
-    return float(np.median(phred_scores)) - phred_offset
 
 
 def mean_quality_filter(quality: float, record: FastqRecord) -> bool:

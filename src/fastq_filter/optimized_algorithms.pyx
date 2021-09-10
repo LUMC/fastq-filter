@@ -23,7 +23,10 @@ from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_C_CONTIG
 from libc.stdint cimport uint8_t, uint_fast32_t
 from libc.math cimport log10
 
-def qualmean(bytes qualities, double phred_offset = 33):
+from .constants import DEFAULT_PHRED_SCORE_OFFSET
+
+
+def qualmean(bytes qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     """
     Returns the mean of the quality scores in an ASCII quality string as stored
     in a FASTQ file. Returns a float value.

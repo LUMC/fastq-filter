@@ -21,13 +21,13 @@ import array
 import math
 import statistics
 import sys
-import textwrap
 from typing import List
 
 import fastq_filter
-from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, mean_quality_filter, \
-    median_quality_filter, max_length_filter, min_length_filter, qualmean, \
-    qualmedian, FastqRecord
+from fastq_filter import FastqRecord, max_length_filter, mean_quality_filter, \
+    median_quality_filter, min_length_filter, qualmean, \
+    qualmedian
+from fastq_filter.constants import DEFAULT_PHRED_SCORE_OFFSET
 
 import pytest  # type: ignore
 
@@ -95,6 +95,7 @@ def test_mean_quality_filter_pass():
     assert mean_quality_filter(
         8, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9]))) is True
 
+
 def test_median_quality_filter_fail():
     assert median_quality_filter(
         10, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9, 10, 10]))
@@ -103,7 +104,8 @@ def test_median_quality_filter_fail():
 
 def test_median_quality_filter_pass():
     assert median_quality_filter(
-        8-0.001, FastqRecord(b"", b"", b"", quallist_to_bytes([1, 1, 1, 8, 9, 9, 9]))
+        8-0.001, FastqRecord(b"", b"", b"",
+                             quallist_to_bytes([1, 1, 1, 8, 9, 9, 9]))
     ) is True
 
 
