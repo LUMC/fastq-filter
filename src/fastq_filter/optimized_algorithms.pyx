@@ -79,7 +79,7 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
 
     cdef uint32_t[128] counts
     # Set all counts to zero
-    memset(&counts, 0, 512)
+    memset(&counts, 0, 512)  # uint32_t is 4 bytes wide. 4x128=512
     cdef uint32_t total = 0
     cdef Py_buffer buffer_data
     cdef uint32_t half
