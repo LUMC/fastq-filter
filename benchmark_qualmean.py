@@ -139,6 +139,6 @@ if __name__ == "__main__":
         benchmark(name,
                   "qualmedian(b'GFFAFFFFDEDDEFFFC?FFFFF8FF9FDFEFCDFFFGEDDFCFEF"
                   "FDFFF/FEED?FFF7FFF;FFFEDFEFC8>FCF>EDDEBDA2F@;FFCFFDDEFF@E9F"
-                  "FDFFEFFFFFFFFFFFFEBFF?A1GCFFFF=FCFFDGFECEEEDG'*4)",
+                  "FDFFEFFFFFFFFFFFFEBFF?A1GCFFFF=FCFFDGFECEEEDG')",
                   setup)
 
