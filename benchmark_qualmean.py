@@ -106,6 +106,10 @@ QUALMEDIAN_CODE = {
                 phred_scores = np.frombuffer(qualities, dtype=np.int8)
                 return float(np.median(phred_scores)) - phred_offset
         """),
+    "Cython implementation": textwrap.dedent(
+        """
+        from fastq_filter.optimized_algorithms import qualmedian
+        """),
 }
 
 import timeit
