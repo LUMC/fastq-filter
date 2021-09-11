@@ -18,24 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import array
+import itertools
 import math
 import statistics
 import sys
 from typing import List
 
+from dnaio import Sequence
+
 import fastq_filter
-from fastq_filter import FastqRecord, max_length_filter, mean_quality_filter, \
+from fastq_filter import max_length_filter, mean_quality_filter, \
     median_quality_filter, min_length_filter, qualmean, \
-    qualmedian
+    qualmedian, fallback_algorithms, optimized_algorithms
 from fastq_filter.constants import DEFAULT_PHRED_SCORE_OFFSET
 
 import pytest  # type: ignore
 
 
-def quallist_to_bytes(quallist: List[int]):
+def quallist_to_string(quallist: List[int]):
     return array.array(
         "B", [qual + DEFAULT_PHRED_SCORE_OFFSET for qual in quallist]
-    ).tobytes()
+    ).tobytes().decode("ascii")
 
 
 QUAL_STRINGS = [
@@ -48,69 +51,74 @@ QUAL_STRINGS = [
 ]
 
 
-@pytest.mark.parametrize("qualstring", QUAL_STRINGS)
-def test_qualmean(qualstring):
+@pytest.mark.parametrize(["function", "qualstring"],
+                         itertools.product([optimized_algorithms.qualmean,
+                                            fallback_algorithms.qualmean],
+                                            QUAL_STRINGS))
+def test_qualmean(qualstring, function):
     offset = DEFAULT_PHRED_SCORE_OFFSET
     qualities = [qual - offset for qual in array.array("b", qualstring)]
     probabilities = [10 ** (qual / -10) for qual in qualities]
     average_prob = statistics.mean(probabilities)
     phred = - 10 * math.log10(average_prob)
-    assert phred == pytest.approx(qualmean(qualstring))
+    assert phred == pytest.approx(function(qualstring))
 
 
-@pytest.mark.parametrize("qualstring", QUAL_STRINGS)
-def test_qualmedian(qualstring):
+@pytest.mark.parametrize(["function", "qualstring"],
+                         itertools.product([optimized_algorithms.qualmedian,
+                                            fallback_algorithms.qualmedian],
+                                            QUAL_STRINGS))
+def test_qualmedian(qualstring, function):
     offset = DEFAULT_PHRED_SCORE_OFFSET
     qualities = [qual - offset for qual in array.array("b", qualstring)]
     median_quality = statistics.median(qualities)
-    assert median_quality == pytest.approx(qualmedian(qualstring))
+    assert median_quality == function(qualstring)
 
 
 def test_min_length_filter_pass():
     assert min_length_filter(
-        10, FastqRecord(b"", b"0123456789A", b"", b"")) is True
+        10, Sequence("", "0123456789A", "???????????")) is True
 
 
 def test_min_length_filter_fail():
     assert min_length_filter(
-        12, FastqRecord(b"", b"0123456789A", b"", b"")) is False
+        12, Sequence("", "0123456789A", "???????????")) is False
 
 
 def test_max_length_filter_pass():
     assert max_length_filter(
-        12, FastqRecord(b"", b"0123456789A", b"", b"")) is True
+        12, Sequence("", "0123456789A", "???????????")) is True
 
 
 def test_max_length_filter_fail():
     assert max_length_filter(
-        10, FastqRecord(b"", b"0123456789A", b"", b"")) is False
+        10, Sequence("", "0123456789A", "???????????")) is False
 
 
 def test_mean_quality_filter_fail():
     assert mean_quality_filter(
-        10, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9]))) is False
+        10, Sequence("", "AAA", quallist_to_string([9, 9, 9]))) is False
 
 
 def test_mean_quality_filter_pass():
     assert mean_quality_filter(
-        8, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9]))) is True
+        8, Sequence("", "AAA", quallist_to_string([9, 9, 9]))) is True
 
 
 def test_median_quality_filter_fail():
     assert median_quality_filter(
-        10, FastqRecord(b"", b"", b"", quallist_to_bytes([9, 9, 9, 10, 10]))
+        10, Sequence("", "AAAAA", quallist_to_string([9, 9, 9, 10, 10]))
     ) is False
 
 
 def test_median_quality_filter_pass():
     assert median_quality_filter(
-        8-0.001, FastqRecord(b"", b"", b"",
-                             quallist_to_bytes([1, 1, 1, 8, 9, 9, 9]))
-    ) is True
+        8-0.001, Sequence(
+            "", "AAAAAAA", quallist_to_string([1, 1, 1, 8, 9, 9, 9]))) is True
 
 
 def test_fastq_records_to_file(tmp_path):
-    records = [FastqRecord(b"@TEST", b"A", b"+", b"A")] * 3
+    records = [Sequence("TEST", "A", "A")] * 3
     out = tmp_path / "test.fq"
     fastq_filter.fastq_records_to_file(records, str(out))
     assert out.read_bytes() == b"@TEST\nA\n+\nA\n" \
@@ -122,7 +130,7 @@ def test_file_to_fastq_records(tmp_path):
     out = tmp_path / "test.fq"
     out.write_bytes(b"@TEST\nA\n+\nA\n@TEST\nA\n+\nA\n@TEST\nA\n+\nA\n")
     assert list(fastq_filter.file_to_fastq_records(str(out))) == [
-        FastqRecord(b"@TEST", b"A", b"+", b"A")] * 3
+        Sequence("TEST", "A", "A")] * 3
 
 
 def test_filter_fastq(tmp_path):
