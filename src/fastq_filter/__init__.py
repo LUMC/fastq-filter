@@ -20,8 +20,9 @@
 import argparse
 import functools
 import sys
-import typing
 from typing import Callable, Generator, Iterable, List
+
+import dnaio
 
 import xopen  # type: ignore
 
@@ -31,63 +32,38 @@ except ImportError:
     from .fallback_algorithms import qualmean, qualmedian
 
 
-class FastqRecord(typing.NamedTuple):
-    """Presents a FASTQ record as a tuple of bytestrings."""
-    name: bytes
-    sequence: bytes
-    plus: bytes
-    qualities: bytes
+def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
+                                                      None, None]:
+    """Parse a FASTQ file into a generator of Sequence objects"""
+    opener=functools.partial(xopen.xopen, threads=0)
+    with dnaio.open(filepath, opener=opener) as record_h:
+        yield from record_h
 
 
-def file_to_fastq_records(filepath: str) -> Generator[FastqRecord, None, None]:
-    """Parse a FASTQ file into a generator of FastqRecord namedtuples"""
-    with xopen.xopen(filepath, "rb", threads=0) as file_h:
-        while True:
-            name = file_h.readline()
-            if name == b"":
-                return
-            if not name.startswith(b"@"):
-                raise ValueError("Record header should start with '@'.")
-            try:
-                sequence = next(file_h)
-                plus = next(file_h)
-                qualities = next(file_h)
-            except StopIteration:
-                raise ValueError("Truncated fastq record at EOF")
-            if len(sequence) != len(qualities):
-                raise ValueError(f"Fastq record with sequence and qualities "
-                                 f"of unequal length at record: "
-                                 f"{name.rstrip()}")
-            yield FastqRecord(name.rstrip(),
-                              sequence.rstrip(),
-                              plus.rstrip(),
-                              qualities.rstrip())
-
-
-def fastq_records_to_file(records: Iterable[FastqRecord], filepath: str):
+def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str):
     with xopen.xopen(filepath, mode='wb', threads=0) as output_h:
         for record in records:
-            output_h.write(b"\n".join(record) + b"\n")
+            output_h.write(record.fastq_bytes())
 
 
-def mean_quality_filter(quality: float, record: FastqRecord) -> bool:
+def mean_quality_filter(quality: float, record: dnaio.Sequence) -> bool:
     """The mean quality of the FASTQ record is equal or above the given
     quality value."""
-    return qualmean(record.qualities) >= quality
+    return qualmean(record.qualities.encode('ascii')) >= quality
 
 
-def median_quality_filter(quality: float, record: FastqRecord) -> bool:
+def median_quality_filter(quality: float, record: dnaio.Sequence) -> bool:
     """The median quality of the FASTQ record is equal or above the given
     quality value."""
-    return qualmedian(record.qualities) >= quality
+    return qualmedian(record.qualities.encode('ascii')) >= quality
 
 
-def min_length_filter(min_length: int, record: FastqRecord) -> bool:
+def min_length_filter(min_length: int, record: dnaio.Sequence) -> bool:
     """The length of the sequence in the FASTQ record is at least min_length"""
     return len(record.sequence) >= min_length
 
 
-def max_length_filter(max_length: int, record: FastqRecord) -> bool:
+def max_length_filter(max_length: int, record: dnaio.Sequence) -> bool:
     """The length of the sequence in the FASTQ record is at most max_length"""
     return len(record.sequence) <= max_length
 
@@ -112,11 +88,11 @@ def print_filter_help():
 
 
 def filter_string_to_filters(filter_string: str
-                             ) -> List[Callable[[FastqRecord], bool]]:
+                             ) -> List[Callable[[dnaio.Sequence], bool]]:
     """Convert a filter string such as 'min_length:50|mean_quality:20 into
     a list of filter functions that can be used by Python's builtin filter
     function."""
-    filters: List[Callable[[FastqRecord], bool]] = []
+    filters: List[Callable[[dnaio.Sequence], bool]] = []
     for single_filter_string in filter_string.split('|'):
         filter_name, filter_argstring = single_filter_string.split(':')
         try:
@@ -145,7 +121,7 @@ def filter_fastq(filter_string: str, input_file: str, output_file: str):
     automatically.
     """
     fastq_records = file_to_fastq_records(input_file)
-    filtered_fastq_records: Iterable[FastqRecord] = fastq_records
+    filtered_fastq_records: Iterable[dnaio.Sequence] = fastq_records
     for filter_func in filter_string_to_filters(filter_string):
         filtered_fastq_records = filter(filter_func, filtered_fastq_records)
     fastq_records_to_file(filtered_fastq_records, output_file)

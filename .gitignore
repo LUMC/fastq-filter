@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Cython files
+src/fastq_filter/*.c
+src/fastq_filter/*.html
+
 # Distribution / packaging
 .Python
 build/

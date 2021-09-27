@@ -79,7 +79,6 @@ Optimizations
 
 fastq-filter has used the following optimizations to be fast:
 
-- The FASTQ parser reads in bytes. No Unicode decoding is used.
 - Filters can be chained together to minimize IO.
 - The python filter function is used. Which is a a shorthand for python code
   that would otherwise need to be interpreted.
@@ -89,3 +88,10 @@ fastq-filter has used the following optimizations to be fast:
 - The median quality algorithm implements a counting sort, which is really
   fast but not applicable for generic data. Since FASTQ qualities are uniquely
   suited for a counting sort, median calculation can be performed very quickly.
+- `dnaio <https://github.com/marcelm/dnaio>`_ is used as FASTQ parser.  This
+  parses the FASTQ files with a parser written in Cython.
+- `xopen <https://github.com/pycompression/xopen>`_ is used to read and write
+  files. This allows for support of gzip compressed files which are opened
+  using `python-isal <https://github.com/pycompression/python-isal>`_ which
+  reads gzip files 2 times faster and writes gzip files 5 times faster than
+  the python ``gzip`` module implementation.
