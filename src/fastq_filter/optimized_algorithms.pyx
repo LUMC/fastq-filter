@@ -112,16 +112,15 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
         for i in range(phred_offset, 127):
             total += counts[i]
             if total >= half:
-                if odd:
+                if odd:  # There is only one value
                     return i - phred_offset
-                else:
-                    if total > half:  # The two middle values were the same.
-                        return i - phred_offset
-                    else:  # The highest middle value is higher than i.
-                        for j in range(i + 1, 127):
-                            if counts[j] > 0:
-                                # Cast to double to prevent integer scores here.
-                                return (<double>(i + j) / 2 - <double>phred_offset)
+                if total > half:  # The two middle values were the same.
+                    return i - phred_offset
+                # The highest middle value is higher than i.
+                for j in range(i + 1, 127):
+                    if counts[j] > 0:
+                        # Cast to double to prevent integer scores here.
+                        return (<double>(i + j) / 2.0 - <double>phred_offset)
         raise RuntimeError("Unable to find median. This is an error in the "
                            "code. Please contact the developers.")
     finally:
