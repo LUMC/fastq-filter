@@ -84,8 +84,9 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     cdef Py_buffer buffer_data
     cdef uint32_t half
     cdef bint odd
-    cdef int i
+    cdef Py_ssize_t i
     cdef int j
+    cdef int k
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
     PyObject_GetBuffer(qualities, buffer, PyBUF_C_CONTIGUOUS)
@@ -108,19 +109,19 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
         for i in range(buffer.len):
             counts[scores[i]] += 1
 
-        # Check at which value of i, we have counted half of the values.
-        for i in range(phred_offset, 127):
-            total += counts[i]
+        # Check at which value of j, we have counted half of the values.
+        for j in range(phred_offset, 127):
+            total += counts[j]
             if total >= half:
                 if odd:  # There is only one value
-                    return i - phred_offset
+                    return j - phred_offset
                 if total > half:  # The two middle values were the same.
-                    return i - phred_offset
+                    return j - phred_offset
                 # The highest middle value is higher than i.
-                for j in range(i + 1, 127):
+                for k in range(j + 1, 127):
                     if counts[j] > 0:
                         # Cast to double to prevent integer scores here.
-                        return (<double>(i + j) / 2.0 - <double>phred_offset)
+                        return (<double>(j + k) / 2.0 - <double>phred_offset)
         raise RuntimeError("Unable to find median. This is an error in the "
                            "code. Please contact the developers.")
     finally:
