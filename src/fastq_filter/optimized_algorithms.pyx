@@ -117,7 +117,7 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
                     return j - phred_offset
                 if total > half:  # The two middle values were the same.
                     return j - phred_offset
-                # The highest middle value is higher than i.
+                # The highest middle value is higher than j.
                 for k in range(j + 1, 127):
                     if counts[j] > 0:
                         # Cast to double to prevent integer scores here.
