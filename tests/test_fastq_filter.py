@@ -27,9 +27,9 @@ from typing import List
 from dnaio import Sequence
 
 import fastq_filter
-from fastq_filter import max_length_filter, mean_quality_filter, \
-    median_quality_filter, min_length_filter, qualmean, \
-    qualmedian, fallback_algorithms, optimized_algorithms
+from fastq_filter import fallback_algorithms, max_length_filter, \
+    mean_quality_filter, median_quality_filter, min_length_filter, \
+    optimized_algorithms
 from fastq_filter.constants import DEFAULT_PHRED_SCORE_OFFSET
 
 import pytest  # type: ignore
@@ -51,10 +51,12 @@ QUAL_STRINGS = [
 ]
 
 
-@pytest.mark.parametrize(["function", "qualstring"],
-                         itertools.product([optimized_algorithms.qualmean,
-                                            fallback_algorithms.qualmean],
-                                            QUAL_STRINGS))
+@pytest.mark.parametrize(
+    ["function", "qualstring"],
+    itertools.product(
+        [optimized_algorithms.qualmean, fallback_algorithms.qualmean],
+        QUAL_STRINGS)
+)
 def test_qualmean(qualstring, function):
     offset = DEFAULT_PHRED_SCORE_OFFSET
     qualities = [qual - offset for qual in array.array("b", qualstring)]
@@ -64,10 +66,11 @@ def test_qualmean(qualstring, function):
     assert phred == pytest.approx(function(qualstring))
 
 
-@pytest.mark.parametrize(["function", "qualstring"],
-                         itertools.product([optimized_algorithms.qualmedian,
-                                            fallback_algorithms.qualmedian],
-                                            QUAL_STRINGS))
+@pytest.mark.parametrize(
+    ["function", "qualstring"], itertools.product(
+        [optimized_algorithms.qualmedian, fallback_algorithms.qualmedian],
+        QUAL_STRINGS)
+)
 def test_qualmedian(qualstring, function):
     offset = DEFAULT_PHRED_SCORE_OFFSET
     qualities = [qual - offset for qual in array.array("b", qualstring)]
