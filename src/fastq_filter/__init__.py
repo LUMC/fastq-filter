@@ -49,15 +49,13 @@ def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str):
 def mean_quality_filter(quality: float, record: dnaio.Sequence) -> bool:
     """The mean quality of the FASTQ record is equal or above the given
     quality value."""
-    return qualmean(record.qualities.encode('ascii')  # type: ignore
-                    ) >= quality
+    return qualmean(record.qualities_as_bytes()) >= quality  # type: ignore
 
 
 def median_quality_filter(quality: float, record: dnaio.Sequence) -> bool:
     """The median quality of the FASTQ record is equal or above the given
     quality value."""
-    return qualmedian(record.qualities.encode('ascii')  # type: ignore
-                      ) >= quality
+    return qualmedian(record.qualities_as_bytes()) >= quality  # type: ignore
 
 
 def min_length_filter(min_length: int, record: dnaio.Sequence) -> bool:

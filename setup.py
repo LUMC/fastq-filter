@@ -73,7 +73,7 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "xopen",
-        "dnaio"
+        "dnaio>=0.6.0"
     ],
     entry_points={"console_scripts": [
         "fastq-filter = fastq_filter:main"]}
