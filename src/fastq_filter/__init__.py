@@ -19,6 +19,8 @@
 # SOFTWARE.
 import argparse
 import functools
+import gzip
+import io
 import sys
 from typing import Callable, Generator, Iterable, List
 
@@ -42,6 +44,10 @@ def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
 
 def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str):
     with xopen.xopen(filepath, mode='wb', threads=0) as output_h:
+        # Because writing to a GzipFile is expensive, buffering the writing
+        # process makes it much faster.
+        if isinstance(output_h, gzip.GzipFile):
+            output_h = io.BufferedWriter(output_h)
         for record in records:
             output_h.write(record.fastq_bytes())
 
