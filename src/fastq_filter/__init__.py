@@ -30,6 +30,8 @@ import xopen  # type: ignore
 
 from .optimized_algorithms import qualmean, qualmedian
 
+DEFAULT_COMPRESSION_LEVEL = 2
+
 
 def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
                                                       None, None]:
@@ -39,8 +41,10 @@ def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
         yield from record_h
 
 
-def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str):
-    with xopen.xopen(filepath, mode='wb', threads=0) as output_h:
+def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str,
+                          compression_level: int = DEFAULT_COMPRESSION_LEVEL):
+    with xopen.xopen(filepath, mode='wb', threads=0,
+                     compresslevel=compression_level) as output_h:
         # Because writing to a GzipFile is expensive, buffering the writing
         # process makes it much faster.
         if isinstance(output_h, gzip.GzipFile):
@@ -111,7 +115,10 @@ def filter_string_to_filters(filter_string: str
     return filters
 
 
-def filter_fastq(filter_string: str, input_file: str, output_file: str):
+def filter_fastq(filter_string: str,
+                 input_file: str,
+                 output_file: str,
+                 compression_level: int = DEFAULT_COMPRESSION_LEVEL):
     """
     Filter a FASTQ input file with the filters in filter_string and write
     the results to the output file.
@@ -122,12 +129,15 @@ def filter_fastq(filter_string: str, input_file: str, output_file: str):
     automatically.
     :param output_file: A FASTQ output filename. Compressed files are handled
     automatically.
+    :param compression_level: Compression level for the output files (if
+    applicable)
     """
     fastq_records = file_to_fastq_records(input_file)
     filtered_fastq_records: Iterable[dnaio.Sequence] = fastq_records
     for filter_func in filter_string_to_filters(filter_string):
         filtered_fastq_records = filter(filter_func, filtered_fastq_records)
-    fastq_records_to_file(filtered_fastq_records, output_file)
+    fastq_records_to_file(filtered_fastq_records, output_file,
+                          compression_level=compression_level)
 
 
 def argument_parser() -> argparse.ArgumentParser:
@@ -152,6 +162,12 @@ def argument_parser() -> argparse.ArgumentParser:
                         help="Output FASTQ file. Compression format "
                              "automatically determined by file extension. "
                              "Default: stdout.")
+    parser.add_argument("-l", "--compression-level", type=int,
+                        default=DEFAULT_COMPRESSION_LEVEL,
+                        help=f"Compression level for the output files. "
+                             f"Relevant when output files have a .gz "
+                             f"extension. Default: {DEFAULT_COMPRESSION_LEVEL}"
+                        )
     return parser
 
 
