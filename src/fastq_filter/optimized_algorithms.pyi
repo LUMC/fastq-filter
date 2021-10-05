@@ -19,7 +19,7 @@
 # SOFTWARE.
 from typing import Union
 
-from .constants import  DEFAULT_PHRED_SCORE_OFFSET
+DEFAULT_PHRED_SCORE_OFFSET: int = ...
 
 def qualmedian(qualities: bytes,
                phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET

@@ -24,7 +24,7 @@ from libc.stdint cimport uint8_t, uint32_t
 from libc.string cimport memset
 from libc.math cimport log10
 
-from .constants import DEFAULT_PHRED_SCORE_OFFSET
+DEFAULT_PHRED_SCORE_OFFSET = 33
 
 
 def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):

@@ -29,7 +29,7 @@ import fastq_filter
 from fastq_filter import max_length_filter, \
     mean_quality_filter, median_quality_filter, min_length_filter, \
     qualmean, qualmedian
-from fastq_filter.constants import DEFAULT_PHRED_SCORE_OFFSET
+from fastq_filter.optimized_algorithms import DEFAULT_PHRED_SCORE_OFFSET
 
 import pytest  # type: ignore
 
