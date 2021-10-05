@@ -17,37 +17,24 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import warnings
+
 from pathlib import Path
 
+from Cython.Build import cythonize
+
 from setuptools import Extension, find_packages, setup
-from setuptools.command.build_ext import build_ext
 
-try:
-    from Cython.Build import cythonize
-    EXT_MODULES = cythonize(
-        Extension("fastq_filter.optimized_algorithms",
-                  ["src/fastq_filter/optimized_algorithms.pyx"]),
-        compiler_directives=dict(language_level="3", binding=True,
-                                 cdivision=True))
-except ImportError:
-    EXT_MODULES = []
-
-
-class BuildExtMayFail(build_ext):
-    def build_extension(self, ext):
-        try:
-            super().build_extension(ext)
-        except Exception as e:
-            warnings.warn(f"Unable to build extension. This installation will "
-                          f"use python fallback algorithms. Error {str(e)}")
-
+EXT_MODULES = cythonize(
+    Extension("fastq_filter.optimized_algorithms",
+              ["src/fastq_filter/optimized_algorithms.pyx"]),
+    compiler_directives=dict(language_level="3", binding=True,
+                             cdivision=True))
 
 LONG_DESCRIPTION = Path("README.rst").read_text()
 
 setup(
     name="fastq-filter",
-    version="0.1.0",
+    version="0.1.0-dev",
     description="A fast FASTQ filter progam.",
     author="Leiden University Medical Center",
     author_email="sasc@lumc.nl",

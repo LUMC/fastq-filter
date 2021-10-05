@@ -28,10 +28,7 @@ import dnaio
 
 import xopen  # type: ignore
 
-try:
-    from .optimized_algorithms import qualmean, qualmedian
-except ImportError:
-    from .fallback_algorithms import qualmean, qualmedian
+from .optimized_algorithms import qualmean, qualmedian
 
 
 def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
