@@ -176,7 +176,10 @@ def main():
         print_filter_help()
         sys.exit(0)
     args = argument_parser().parse_args()
-    filter_fastq(args.filters, args.input, args.output)
+    filter_fastq(filter_string=args.filters,
+                 input_file=args.input,
+                 output_file=args.output,
+                 compression_level=args.compression_level)
 
 
 if __name__ == "__main__":
