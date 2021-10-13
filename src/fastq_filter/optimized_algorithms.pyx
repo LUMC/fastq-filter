@@ -39,9 +39,9 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # internally and this prevents casting.
     cdef float phred_constant = 10 ** -0.1
     cdef float sum_probabilities = 0.0
-    cdef float average
+    cdef double average
     cdef double average_phred
-    cdef int i
+    cdef Py_ssize_t i
     cdef Py_buffer buffer_data
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
@@ -52,8 +52,8 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
             raise ValueError("Empty quality string")
         for i in range(buffer.len):
             sum_probabilities += phred_constant ** scores[i]
-        average = sum_probabilities / buffer.len
-        average_phred = -10 * log10(<double>average) - phred_offset
+        average = <double>sum_probabilities / <double>buffer.len
+        average_phred = -10 * log10(average) - phred_offset
         return average_phred
     finally:
         PyBuffer_Release(buffer)
