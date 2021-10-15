@@ -59,7 +59,7 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "xopen",
+        "xopen>=1.2.1",
         "dnaio>=0.6.0"
     ],
     entry_points={"console_scripts": [
