@@ -18,9 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_C_CONTIGUOUS
+from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_SIMPLE
 
-from libc.stdint cimport uint8_t, uint32_t
+from libc.stdint cimport uint8_t
 from libc.string cimport memset
 from libc.math cimport log10
 
@@ -45,7 +45,7 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     cdef Py_buffer buffer_data
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
-    PyObject_GetBuffer(qualities, buffer, PyBUF_C_CONTIGUOUS)
+    PyObject_GetBuffer(qualities, buffer, PyBUF_SIMPLE)
     cdef uint8_t *scores = <uint8_t *>buffer.buf
     try:
         if buffer.len == 0:
@@ -89,7 +89,7 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     cdef int k
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
-    PyObject_GetBuffer(qualities, buffer, PyBUF_C_CONTIGUOUS)
+    PyObject_GetBuffer(qualities, buffer, PyBUF_SIMPLE)
     cdef uint8_t *scores = <uint8_t *>buffer.buf
 
     try:
