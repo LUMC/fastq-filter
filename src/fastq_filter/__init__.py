@@ -35,7 +35,7 @@ def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
                                                       None, None]:
     """Parse a FASTQ file into a generator of Sequence objects"""
     opener = functools.partial(xopen.xopen, threads=0)
-    with dnaio.open(filepath, opener=opener) as record_h:
+    with dnaio.open(filepath, opener=opener) as record_h:  # type: ignore
         yield from record_h
 
 
