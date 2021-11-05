@@ -151,8 +151,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--help-filters", action="store_true",
                         help="Print all the available filters.")
     parser.add_argument("-o", "--output",
-                        default=(None if sys.platform.startswith("win")
-                                 else "/dev/stdout"),
+                        default="-",
                         help="Output FASTQ file. Compression format "
                              "automatically determined by file extension. "
                              "Default: stdout.")
