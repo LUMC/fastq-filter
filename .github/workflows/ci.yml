@@ -102,9 +102,9 @@ jobs:
             tox
 
   deploy:
-    #if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     runs-on: ${{ matrix.os }}
-    #needs: [lint, package-checks, test]
+    needs: [lint, package-checks, test]
     strategy:
       matrix:
         os:
