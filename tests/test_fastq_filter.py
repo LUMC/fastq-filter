@@ -162,3 +162,10 @@ def test_help_filters(capsys):
     assert "The mean quality" in result.out
     assert "at least min_length" in result.out
     assert "at most max_length" in result.out
+
+
+@pytest.mark.parametrize("func", [qualmean, qualmedian])
+def test_empty_quals_error(func):
+    with pytest.raises(ValueError) as error:
+        func(b"")
+    assert error.match("Empty")
