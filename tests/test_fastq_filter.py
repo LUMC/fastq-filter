@@ -126,6 +126,12 @@ def test_file_to_fastq_records(tmp_path):
         Sequence("TEST", "A", "A")] * 3
 
 
+def test_wrong_filter():
+    with pytest.raises(ValueError) as e:
+        fastq_filter.filter_string_to_filters("nonsense:20")
+    assert e.match("Unknown filter")
+
+
 def test_filter_fastq(tmp_path):
     in_f = tmp_path / "in.fq"
     out_f = tmp_path / "out.fq"
@@ -144,3 +150,22 @@ def test_main(tmp_path):
                 str(in_f)]
     fastq_filter.main()
     assert out_f.read_bytes() == b"@TEST\nAA\n+\nAA\n"
+
+
+def test_help_filters(capsys):
+    sys.argv = ["", "--help-filters"]
+    with pytest.raises(SystemExit):
+        fastq_filter.main()
+    result = capsys.readouterr()
+    # Test if docstrings get printed.
+    assert "median quality of the FASTQ record" in result.out
+    assert "The mean quality" in result.out
+    assert "at least min_length" in result.out
+    assert "at most max_length" in result.out
+
+
+@pytest.mark.parametrize("func", [qualmean, qualmedian])
+def test_empty_quals_error(func):
+    with pytest.raises(ValueError) as error:
+        func(b"")
+    assert error.match("Empty")

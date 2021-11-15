@@ -35,7 +35,7 @@ def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
                                                       None, None]:
     """Parse a FASTQ file into a generator of Sequence objects"""
     opener = functools.partial(xopen.xopen, threads=0)
-    with dnaio.open(filepath, opener=opener) as record_h:
+    with dnaio.open(filepath, opener=opener) as record_h:  # type: ignore
         yield from record_h
 
 
@@ -101,7 +101,7 @@ def filter_string_to_filters(filter_string: str
         except KeyError:
             raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
                              f" {' '.join(FILTERS.keys())}")
-        # Convert the strings from the command line in the appropiate types
+        # Convert the strings from the command line in the appropriate types
         filter_args = [filter_argtypes[pos](arg) for pos, arg
                        in enumerate(filter_argstring.split(','))]
 
@@ -175,5 +175,5 @@ def main():
                  compression_level=args.compression_level)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

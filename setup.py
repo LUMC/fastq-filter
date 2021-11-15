@@ -28,7 +28,7 @@ EXT_MODULES = cythonize(
     Extension("fastq_filter.optimized_algorithms",
               ["src/fastq_filter/optimized_algorithms.pyx"]),
     compiler_directives=dict(language_level="3", binding=True,
-                             cdivision=True))
+                             cdivision=True, profile=True))
 
 LONG_DESCRIPTION = Path("README.rst").read_text()
 
