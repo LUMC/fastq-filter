@@ -83,13 +83,9 @@ fastq-filter has used the following optimizations to be fast:
 - The python filter function is used. Which is a a shorthand for python code
   that would otherwise need to be interpreted.
 - The mean and median quality algorithms are implemented in Cython.
-- The mean quality algorithm has been optimized to use the minimum number of
-  calculations.
-- The mean quality algorithm calculates the per-base quality from the phred
-  score as a single-precision (32-bit) floating point number instead of a
-  double-precision (64-bit) floating point number. This is 4 times faster.
-  Given that phred scores have at most 2 significant digits, using
-  double-precision does not add any meaningful accuracy.
+- The mean quality algorithm uses a lookup table since there are only 93
+  possible phred scores encoded in FASTQ. That saves a lot of power
+  calculations to calculate the probabilities.
 - The median quality algorithm implements a counting sort, which is really
   fast but not applicable for generic data. Since FASTQ qualities are uniquely
   suited for a counting sort, median calculation can be performed very quickly.
