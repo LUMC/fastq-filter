@@ -64,17 +64,22 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # Cython makes sure error is handled when acquiring buffer fails.
     PyObject_GetBuffer(qualities, buffer, PyBUF_SIMPLE)
     cdef uint8_t *scores = <uint8_t *>buffer.buf
+    cdef uint8_t score
     try:
         if buffer.len == 0:
             raise ValueError("Empty quality string")
         for i in range(buffer.len):
-            sum_probabilities += QUAL_LOOKUP[scores[i]]
+            score = scores[i]
+            if not (phred_offset <= score < 127):
+                raise ValueError(f"Value outside phred range "
+                                 f"({phred_offset}-127) detected in qualities: "
+                                 f"{repr(qualities)}.")
+            sum_probabilities += QUAL_LOOKUP[score]
         average = sum_probabilities / <double>buffer.len
         average_phred = -10 * log10(average) - phred_offset
         return average_phred
     finally:
         PyBuffer_Release(buffer)
-
 
 
 def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
