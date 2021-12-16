@@ -21,11 +21,27 @@
 from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_SIMPLE
 
 from libc.stdint cimport uint8_t
-from libc.string cimport memset
+from libc.string cimport memset, memcmp
 from libc.math cimport log10
 
 DEFAULT_PHRED_SCORE_OFFSET = 33
+cdef Py_ssize_t[256] EMPTY_HIST = [0] * 256
 
+cdef void create_histogram(Py_ssize_t * histogram, uint8_t * scores,
+                           Py_ssize_t length):
+    cdef Py_ssize_t i
+    # Set all counts to zero
+    memset(histogram, 0, sizeof(Py_ssize_t) * 256)
+    for i in range(length):
+        histogram[scores[i]] += 1
+
+cdef bint histogram_scores_in_phred_range(Py_ssize_t * histogram, uint8_t phred_offset):
+    """Check if values in the histogram are outside the phred score range."""
+    cdef int below_range = memcmp(histogram, EMPTY_HIST, phred_offset * sizeof(Py_ssize_t))
+    cdef int above_range = memcmp(histogram + 127, EMPTY_HIST, (256-127) * sizeof(Py_ssize_t))
+    if below_range != 0 or above_range !=0:
+        return 0
+    return 1
 
 def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     """
@@ -41,7 +57,6 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     cdef float sum_probabilities = 0.0
     cdef double average
     cdef double average_phred
-    cdef Py_ssize_t i
     cdef Py_buffer buffer_data
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
@@ -78,8 +93,6 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # array where half or over half of the values have been counted.
 
     cdef Py_ssize_t[256] counts
-    # Set all counts to zero, this is not done on initialization.
-    memset(&counts, 0, sizeof(Py_ssize_t) * 256)
     cdef Py_ssize_t total = 0
     cdef Py_buffer buffer_data
     cdef Py_ssize_t half
@@ -105,10 +118,11 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
             # at count 25
             half = buffer.len // 2
 
-        # Create the counts histogram
-        for i in range(buffer.len):
-            counts[scores[i]] += 1
-
+        create_histogram(counts, scores, buffer.len)
+        if not histogram_scores_in_phred_range(counts, phred_offset):
+            raise ValueError(f"Value outside phred range "
+                             f"({phred_offset}-127) detected in qualities: "
+                             f"{repr(qualities)}.")
         # Check at which value of j, we have counted half of the values.
         for j in range(phred_offset, 127):
             total += counts[j]
