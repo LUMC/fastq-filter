@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import array
+import itertools
 import math
 import statistics
 import sys
@@ -66,6 +67,24 @@ def test_qualmedian(qualstring):
     qualities = [qual - offset for qual in array.array("b", qualstring)]
     median_quality = statistics.median(qualities)
     assert median_quality == qualmedian(qualstring)
+
+
+INVALID_PHREDS = (chr(x).encode("latin-1") for x
+                  in itertools.chain(range(33), range(127, 256)))
+
+
+@pytest.mark.parametrize("qualstring", INVALID_PHREDS)
+def test_qualmean_invalid_quals(qualstring):
+    with pytest.raises(ValueError) as error:
+        qualmean(qualstring)
+    error.match("Value outside phred range")
+
+
+@pytest.mark.parametrize("qualstring", INVALID_PHREDS)
+def test_qualmedian_invalid_quals(qualstring):
+    with pytest.raises(ValueError) as error:
+        qualmean(qualstring)
+    error.match("Value outside phred range")
 
 
 def test_min_length_filter_pass():
