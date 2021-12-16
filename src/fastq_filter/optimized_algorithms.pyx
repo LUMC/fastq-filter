@@ -26,6 +26,7 @@ from libc.math cimport log10
 
 DEFAULT_PHRED_SCORE_OFFSET = 33
 cdef const Py_ssize_t[256] EMPTY_HIST
+cdef double[256] QUAL_LOOKUP = [10 ** (-0.1 * x) for x in range(256)]
 
 cdef void create_histogram(Py_ssize_t * histogram, uint8_t * scores,
                            Py_ssize_t length):
@@ -55,8 +56,7 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # This is 4 times faster on the PC of this developer.
     # For the average_phred, double values are used since Python uses doubles
     # internally and this prevents casting.
-    cdef float phred_constant = 10 ** -0.1
-    cdef float sum_probabilities = 0.0
+    cdef double sum_probabilities = 0.0
     cdef double average
     cdef double average_phred
     cdef Py_buffer buffer_data
@@ -68,12 +68,13 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
         if buffer.len == 0:
             raise ValueError("Empty quality string")
         for i in range(buffer.len):
-            sum_probabilities += phred_constant ** scores[i]
-        average = <double>sum_probabilities / <double>buffer.len
+            sum_probabilities += QUAL_LOOKUP[scores[i]]
+        average = sum_probabilities / <double>buffer.len
         average_phred = -10 * log10(average) - phred_offset
         return average_phred
     finally:
         PyBuffer_Release(buffer)
+
 
 
 def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
