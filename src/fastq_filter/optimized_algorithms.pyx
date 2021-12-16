@@ -25,7 +25,7 @@ from libc.string cimport memset, memcmp
 from libc.math cimport log10
 
 DEFAULT_PHRED_SCORE_OFFSET = 33
-cdef Py_ssize_t[256] EMPTY_HIST = [0] * 256
+cdef const Py_ssize_t[256] EMPTY_HIST
 
 cdef void create_histogram(Py_ssize_t * histogram, uint8_t * scores,
                            Py_ssize_t length):
@@ -37,6 +37,8 @@ cdef void create_histogram(Py_ssize_t * histogram, uint8_t * scores,
 
 cdef bint histogram_scores_in_phred_range(Py_ssize_t * histogram, uint8_t phred_offset):
     """Check if values in the histogram are outside the phred score range."""
+    # Memcmp to prepared empty hist seems to be the fastest method.
+    # Faster than anything involving array iteration.
     cdef int below_range = memcmp(histogram, EMPTY_HIST, phred_offset * sizeof(Py_ssize_t))
     cdef int above_range = memcmp(histogram + 127, EMPTY_HIST, (256-127) * sizeof(Py_ssize_t))
     if below_range != 0 or above_range !=0:
