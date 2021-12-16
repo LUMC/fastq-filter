@@ -77,9 +77,9 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # only the median. We find the median by finding the point in the counts
     # array where half or over half of the values have been counted.
 
-    cdef Py_ssize_t[128] counts
+    cdef Py_ssize_t[256] counts
     # Set all counts to zero, this is not done on initialization.
-    memset(&counts, 0, sizeof(Py_ssize_t) * 128)
+    memset(&counts, 0, sizeof(Py_ssize_t) * 256)
     cdef Py_ssize_t total = 0
     cdef Py_buffer buffer_data
     cdef Py_ssize_t half
