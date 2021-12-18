@@ -26,7 +26,7 @@ from libc.math cimport log10
 
 DEFAULT_PHRED_SCORE_OFFSET = 33
 cdef const Py_ssize_t[256] EMPTY_HIST
-cdef double[256] QUAL_LOOKUP = [10 ** (-0.1 * x) for x in range(256)]
+cdef double[128] QUAL_LOOKUP = [10 ** (-0.1 * x) for x in range(128)]
 
 cdef void create_histogram(Py_ssize_t * histogram, uint8_t * scores,
                            Py_ssize_t length):
