@@ -70,6 +70,21 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset  
         """
     ),
+    "Pure python + lookup table": textwrap.dedent(
+        """
+        import math
+        import array
+        QUAL_VALUES = [10 ** (x * -0.1) for x in range(256)]
+    
+        def qualmean(qualities: bytes, phred_offset: int = 33) -> float:
+            qual_values = QUAL_VALUES  # Only one global lookup.
+            sum_probabilities = 0.0
+            for score in qualities:
+                sum_probabilities += qual_values[score]
+            average = sum_probabilities / len(qualities)
+            return -10 * math.log10(average) - phred_offset  
+        """
+    ),
     "Cython implementation": textwrap.dedent(
         """
         from fastq_filter.optimized_algorithms import qualmean

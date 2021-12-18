@@ -21,11 +21,30 @@
 from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_SIMPLE
 
 from libc.stdint cimport uint8_t
-from libc.string cimport memset
+from libc.string cimport memset, memcmp
 from libc.math cimport log10
 
 DEFAULT_PHRED_SCORE_OFFSET = 33
+cdef const Py_ssize_t[256] EMPTY_HIST
+cdef double[128] QUAL_LOOKUP = [10 ** (-0.1 * x) for x in range(128)]
 
+cdef void create_histogram(Py_ssize_t * histogram, uint8_t * scores,
+                           Py_ssize_t length):
+    cdef Py_ssize_t i
+    # Set all counts to zero
+    memset(histogram, 0, sizeof(Py_ssize_t) * 256)
+    for i in range(length):
+        histogram[scores[i]] += 1
+
+cdef bint histogram_scores_in_phred_range(Py_ssize_t * histogram, uint8_t phred_offset):
+    """Check if values in the histogram are outside the phred score range."""
+    # Memcmp to prepared empty hist seems to be the fastest method.
+    # Faster than anything involving array iteration.
+    cdef int below_range = memcmp(histogram, EMPTY_HIST, phred_offset * sizeof(Py_ssize_t))
+    cdef int above_range = memcmp(histogram + 127, EMPTY_HIST, (256-127) * sizeof(Py_ssize_t))
+    if below_range != 0 or above_range !=0:
+        return 0
+    return 1
 
 def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     """
@@ -37,22 +56,26 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # This is 4 times faster on the PC of this developer.
     # For the average_phred, double values are used since Python uses doubles
     # internally and this prevents casting.
-    cdef float phred_constant = 10 ** -0.1
-    cdef float sum_probabilities = 0.0
+    cdef double sum_probabilities = 0.0
     cdef double average
     cdef double average_phred
-    cdef Py_ssize_t i
     cdef Py_buffer buffer_data
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
     PyObject_GetBuffer(qualities, buffer, PyBUF_SIMPLE)
     cdef uint8_t *scores = <uint8_t *>buffer.buf
+    cdef uint8_t score
     try:
         if buffer.len == 0:
             raise ValueError("Empty quality string")
         for i in range(buffer.len):
-            sum_probabilities += phred_constant ** scores[i]
-        average = <double>sum_probabilities / <double>buffer.len
+            score = scores[i]
+            if not (phred_offset <= score < 127):
+                raise ValueError(f"Value outside phred range "
+                                 f"({phred_offset}-127) detected in qualities: "
+                                 f"{repr(qualities)}.")
+            sum_probabilities += QUAL_LOOKUP[score]
+        average = sum_probabilities / <double>buffer.len
         average_phred = -10 * log10(average) - phred_offset
         return average_phred
     finally:
@@ -77,9 +100,7 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # only the median. We find the median by finding the point in the counts
     # array where half or over half of the values have been counted.
 
-    cdef Py_ssize_t[128] counts
-    # Set all counts to zero, this is not done on initialization.
-    memset(&counts, 0, sizeof(Py_ssize_t) * 128)
+    cdef Py_ssize_t[256] counts
     cdef Py_ssize_t total = 0
     cdef Py_buffer buffer_data
     cdef Py_ssize_t half
@@ -105,10 +126,11 @@ def qualmedian(qualities, int phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
             # at count 25
             half = buffer.len // 2
 
-        # Create the counts histogram
-        for i in range(buffer.len):
-            counts[scores[i]] += 1
-
+        create_histogram(counts, scores, buffer.len)
+        if not histogram_scores_in_phred_range(counts, phred_offset):
+            raise ValueError(f"Value outside phred range "
+                             f"({phred_offset}-127) detected in qualities: "
+                             f"{repr(qualities)}.")
         # Check at which value of j, we have counted half of the values.
         for j in range(phred_offset, 127):
             total += counts[j]
