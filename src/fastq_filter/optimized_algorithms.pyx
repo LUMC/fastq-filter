@@ -46,28 +46,28 @@ cdef bint histogram_scores_in_phred_range(Py_ssize_t * histogram, uint8_t phred_
         return 0
     return 1
 
-def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
+def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     """
     Returns the mean of the quality scores in an ASCII quality string as stored
     in a FASTQ file.
     """
-    # All intermediate calculations are calculated with single precision as
-    # this saves a double power (**) and double addition calculation.
-    # This is 4 times faster on the PC of this developer.
-    # For the average_phred, double values are used since Python uses doubles
-    # internally and this prevents casting.
-    cdef double sum_probabilities = 0.0
-    cdef double average
-    cdef double average_phred
+    # Calculate probabilities without taking the offset into account, then
+    # subtract the offset. This is valid, see: deriving_mean_quality.pdf.
+    # This allows us to use only one lookup table for all possible offsets.
     cdef Py_buffer buffer_data
     cdef Py_buffer* buffer = &buffer_data
     # Cython makes sure error is handled when acquiring buffer fails.
     PyObject_GetBuffer(qualities, buffer, PyBUF_SIMPLE)
     cdef uint8_t *scores = <uint8_t *>buffer.buf
     cdef uint8_t score
+    cdef double sum_probabilities = 0.0
+    cdef double average
+    cdef double average_phred
     try:
         if buffer.len == 0:
             raise ValueError("Empty quality string")
+
+        # Look up pre-calculated scores for each phred value and sum them.
         for i in range(buffer.len):
             score = scores[i]
             if not (phred_offset <= score < 127):
@@ -75,6 +75,7 @@ def qualmean(qualities, double phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
                                  f"({phred_offset}-127) detected in qualities: "
                                  f"{repr(qualities)}.")
             sum_probabilities += QUAL_LOOKUP[score]
+
         average = sum_probabilities / <double>buffer.len
         average_phred = -10 * log10(average) - phred_offset
         return average_phred
