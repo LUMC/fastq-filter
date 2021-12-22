@@ -39,12 +39,10 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     cdef uint8_t score
     cdef double sum_probabilities = 0.0
     cdef double average
-    cdef double average_phred
     try:
         if buffer.len == 0:
             raise ValueError("Empty quality string")
 
-        # Look up pre-calculated scores for each phred value and sum them.
         for i in range(buffer.len):
             score = scores[i]
             if not (phred_offset <= score < 127):
@@ -52,10 +50,8 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
                                  f"({phred_offset}-127) detected in qualities: "
                                  f"{repr(qualities)}.")
             sum_probabilities += QUAL_LOOKUP[score - phred_offset]
-
         average = sum_probabilities / <double>buffer.len
-        average_phred = -10 * log10(average)
-        return average_phred
+        return -10 * log10(average)
     finally:
         PyBuffer_Release(&buffer)
 
