@@ -27,3 +27,7 @@ def qualmedian(qualities: bytes,
 
 def qualmean(qualities: bytes,
              phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET) -> float: ...
+
+def qualmean_precise(qualities: bytes,
+                     phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
+                     ) -> float: ...
