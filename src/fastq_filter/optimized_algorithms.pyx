@@ -59,7 +59,15 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     finally:
         PyBuffer_Release(&buffer)
 
+
 def qualmean_precise(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
+    """
+    Returns the mean of the quality scores in an ASCII quality string as stored
+    in a FASTQ file.
+
+    This version minimizes floating point addition by using a histogram. This
+    comes at the cost of speed.
+    """
     cdef PhredHistogram histogram
     cdef Py_buffer buffer
     cdef double average_probability
