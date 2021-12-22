@@ -34,7 +34,7 @@ LONG_DESCRIPTION = Path("README.rst").read_text()
 
 setup(
     name="fastq-filter",
-    version="0.1.0",
+    version="0.2.0-dev",
     description="A fast FASTQ filter progam.",
     author="Leiden University Medical Center",
     author_email="sasc@lumc.nl",
