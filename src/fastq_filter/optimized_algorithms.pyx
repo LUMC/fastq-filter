@@ -35,10 +35,9 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # Calculate probabilities without taking the offset into account, then
     # subtract the offset. This is valid, see: deriving_mean_quality.pdf.
     # This allows us to use only one lookup table for all possible offsets.
-    cdef Py_buffer buffer_data
-    cdef Py_buffer* buffer = &buffer_data
+    cdef Py_buffer buffer
     # Cython makes sure error is handled when acquiring buffer fails.
-    PyObject_GetBuffer(qualities, buffer, PyBUF_SIMPLE)
+    PyObject_GetBuffer(qualities, &buffer, PyBUF_SIMPLE)
     cdef uint8_t *scores = <uint8_t *>buffer.buf
     cdef uint8_t score
     cdef double sum_probabilities = 0.0
@@ -61,7 +60,7 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
         average_phred = -10 * log10(average) - phred_offset
         return average_phred
     finally:
-        PyBuffer_Release(buffer)
+        PyBuffer_Release(&buffer)
 
 ctypedef Py_ssize_t HistogramInt
 ctypedef HistogramInt[256] PhredHistogram
@@ -86,17 +85,15 @@ def qualmedian(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # array where half or over half of the values have been counted.
 
     cdef PhredHistogram histogram
-    cdef Py_buffer buffer_data
-    cdef Py_buffer* buffer = &buffer_data
+    cdef Py_buffer buffer
     # Cython makes sure error is handled when acquiring buffer fails.
-    PyObject_GetBuffer(qualities, buffer, PyBUF_SIMPLE)
-    cdef uint8_t *scores = <uint8_t *>buffer.buf
+    PyObject_GetBuffer(qualities, &buffer, PyBUF_SIMPLE)
 
     try:
         if buffer.len == 0:
             raise ValueError("Empty quality string")
 
-        create_phred_histogram(histogram, scores, buffer.len)
+        create_phred_histogram(histogram, <uint8_t *>buffer.buf, buffer.len)
         if not histogram_scores_in_phred_range(histogram, phred_offset):
             raise ValueError(f"Value outside phred range "
                              f"({phred_offset}-127) detected in qualities: "
@@ -104,7 +101,7 @@ def qualmedian(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
         return median_from_phred_histogram(histogram, buffer.len, phred_offset)
 
     finally:
-        PyBuffer_Release(buffer)
+        PyBuffer_Release(&buffer)
  
 cdef object median_from_phred_histogram(HistogramInt *histogram,
                                         Py_ssize_t no_items, 
