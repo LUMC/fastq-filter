@@ -32,9 +32,6 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     Returns the mean of the quality scores in an ASCII quality string as stored
     in a FASTQ file.
     """
-    # Calculate probabilities without taking the offset into account, then
-    # subtract the offset. This is valid, see: deriving_mean_quality.pdf.
-    # This allows us to use only one lookup table for all possible offsets.
     cdef Py_buffer buffer
     # Cython makes sure error is handled when acquiring buffer fails.
     PyObject_GetBuffer(qualities, &buffer, PyBUF_SIMPLE)
@@ -54,10 +51,10 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
                 raise ValueError(f"Value outside phred range "
                                  f"({phred_offset}-127) detected in qualities: "
                                  f"{repr(qualities)}.")
-            sum_probabilities += QUAL_LOOKUP[score]
+            sum_probabilities += QUAL_LOOKUP[score - phred_offset]
 
         average = sum_probabilities / <double>buffer.len
-        average_phred = -10 * log10(average) - phred_offset
+        average_phred = -10 * log10(average)
         return average_phred
     finally:
         PyBuffer_Release(&buffer)
