@@ -140,8 +140,8 @@ cdef bint histogram_scores_in_phred_range(HistogramInt *histogram, uint8_t phred
     """Check if values in the histogram are outside the phred score range."""
     # Memcmp to prepared empty hist seems to be the fastest method.
     # Faster than anything involving array iteration.
-    cdef int below_range = memcmp(histogram, EMPTY_HIST, phred_offset * sizeof(Py_ssize_t))
-    cdef int above_range = memcmp(histogram + 127, EMPTY_HIST, (256-127) * sizeof(Py_ssize_t))
+    cdef int below_range = memcmp(histogram, EMPTY_HIST, phred_offset * sizeof(HistogramInt))
+    cdef int above_range = memcmp(histogram + 127, EMPTY_HIST, (256-127) * sizeof(HistogramInt))
     if below_range != 0 or above_range !=0:
         return 0
     return 1
