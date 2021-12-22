@@ -62,6 +62,28 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     finally:
         PyBuffer_Release(&buffer)
 
+def qualmean_precise(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
+    cdef PhredHistogram histogram
+    cdef Py_buffer buffer
+    cdef double average_probability
+    # Cython makes sure error is handled when acquiring buffer fails.
+    PyObject_GetBuffer(qualities, &buffer, PyBUF_SIMPLE)
+
+    try:
+        if buffer.len == 0:
+            raise ValueError("Empty quality string")
+
+        create_phred_histogram(histogram, <uint8_t *>buffer.buf, buffer.len)
+        if not histogram_scores_in_phred_range(histogram, phred_offset):
+            raise ValueError(f"Value outside phred range "
+                             f"({phred_offset}-127) detected in qualities: "
+                             f"{repr(qualities)}.")
+        average_probability = average_probability_from_phred_histogram(histogram, buffer.len, phred_offset)
+        return -10 * log10(average_probability)
+    finally:
+        PyBuffer_Release(&buffer)
+ 
+
 ctypedef Py_ssize_t HistogramInt
 ctypedef HistogramInt[256] PhredHistogram
 cdef const PhredHistogram EMPTY_HIST
@@ -142,3 +164,12 @@ cdef bint histogram_scores_in_phred_range(HistogramInt *histogram, uint8_t phred
     if below_range != 0 or above_range !=0:
         return 0
     return 1
+
+cdef double average_probability_from_phred_histogram(HistogramInt *histogram,
+                                                     Py_ssize_t number_of_items,
+                                                     uint8_t phred_offset):
+    cdef double sum_probabilities = 0
+    cdef int phred_score
+    for phred_score in range(phred_offset, 127):
+        sum_probabilities += histogram[phred_score] * QUAL_LOOKUP[phred_score - phred_offset]
+    return sum_probabilities / <double>number_of_items
