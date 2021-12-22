@@ -69,6 +69,14 @@ def test_qualmedian(qualstring):
     assert median_quality == qualmedian(qualstring)
 
 
+def test_qualmedian_correct():
+    # Make sure qualmedian also returns averages.
+    qualities = b"AACEGG"  # Median value should be D. ord("D") == 68
+    result = qualmedian(qualities, 0)
+    assert result == 68.0
+    assert type(result) == float
+
+
 INVALID_PHREDS = (chr(x).encode("latin-1") for x
                   in itertools.chain(range(33), range(127, 256)))
 

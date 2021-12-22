@@ -90,6 +90,12 @@ QUALMEAN_CODE = {
         from fastq_filter.optimized_algorithms import qualmean
         """
     ),
+    "Cython implementation precise": textwrap.dedent(
+        """
+        from fastq_filter.optimized_algorithms import \
+        qualmean_precise as qualmean
+        """
+    ),
 }
 QUALMEDIAN_CODE = {
     "Median numpy implementation with float": textwrap.dedent(
