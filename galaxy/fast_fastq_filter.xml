@@ -1,0 +1,34 @@
+<tool id="fast_fastq_filter" name="Filter FASTQ reads" version="0.1.0" python_template_version="3.5">
+    <requirements>
+        <requirement type="package" version="0.1.0">fastq-filter</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+        fastq-filter -o '$output1' mean_quality:20 '$input1'
+    ]]></command>
+    <inputs>
+        <param type="data" name="input1" format="gz" />
+    </inputs>
+    <outputs>
+        <data name="output1" format="fastq.gz" />
+    </outputs>
+    <tests>
+        <test>
+            <param name="input1" value="input.fastq.gz"/>
+            <output name="output1" file="output.fastq.gz"/>
+        </test>
+    </tests>
+    <help><![CDATA[
+        TODO: Fill in help.
+    ]]></help>
+    <citations>
+        <citation type="bibtex">
+@misc{githubfastq-filter,
+  author = {LastTODO, FirstTODO},
+  year = {TODO},
+  title = {fastq-filter},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  url = {https://github.com/LUMC/fastq-filter},
+}</citation>
+    </citations>
+</tool>
