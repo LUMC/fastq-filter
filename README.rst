@@ -25,6 +25,10 @@ when calculating the mean.
 Installation
 ============
 
+.. code-block::
+
+    pip install fastq-filter
+
 For the latest development version
 
 .. code-block::
