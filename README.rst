@@ -1,3 +1,18 @@
+.. image:: https://img.shields.io/pypi/v/fastq-filter.svg
+  :target: https://pypi.org/project/isal/
+  :alt:
+
+.. image:: https://img.shields.io/pypi/pyversions/fastq-filter.svg
+  :target: https://pypi.org/project/isal/
+  :alt:
+
+.. image:: https://img.shields.io/pypi/l/fastq-filter.svg
+  :target: https://github.com/LUMC/fastq-filter/blob/main/LICENSE
+  :alt:
+
+.. image:: https://codecov.io/gh/LUMC/fastq-filter/branch/main/graph/badge.svg?token=E85BEYDQ45
+  :target: https://codecov.io/gh/LUMC/fastq-filter
+
 =============
 fastq-filter
 =============
