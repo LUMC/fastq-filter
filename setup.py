@@ -47,7 +47,7 @@ setup(
     package_dir={'': 'src'},
     package_data={'fastq_filter': ['*.pyx', '*.pyi']},
     ext_modules=EXT_MODULES,
-    url="https://github.com/lumc/fastq-flter",
+    url="https://github.com/lumc/fastq-filter",
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3",
