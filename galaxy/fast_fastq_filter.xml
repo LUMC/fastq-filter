@@ -3,10 +3,21 @@
         <requirement type="package" version="0.1.0">fastq-filter</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
-        fastq-filter -o '$output1' mean_quality:20 '$input1'
+        fastq-filter -o '$output1' \
+        #echo "'" + "|".join(filter + ":" + str(value) for filter, value in $filters) + "'\"
+        '$input1'
     ]]></command>
     <inputs>
         <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
+        <repeat name="filters" title="Filters">
+            <param name="filter" type="select" label="Filter on">
+              <option value="min_length">minimum length</option>
+              <option value="max_length">minimum length</option>
+              <option value="mean_quality">mean quality</option>
+              <option value="mean_quality">mean quality</option>
+            </param>
+            <param name="filter_treshold" type="integer" label="Filter threshold"/>
+        </repeat>
     </inputs>
     <outputs>
         <data name="output1" format="fastq.gz" />
@@ -18,7 +29,11 @@
         </test>
     </tests>
     <help><![CDATA[
-        TODO: Fill in help.
+        mean_quality:<quality>         The mean quality of the FASTQ record is equal or above the given quality value.
+        median_quality:<quality>       The median quality of the FASTQ record is equal or above the given quality value.
+        min_length:<length>            The length of the sequence in the FASTQ record is at least min_length
+        max_length:<length>            The length of the sequence in the FASTQ record is at most max_length
+
     ]]></help>
     <citations>
         <citation type="bibtex">
