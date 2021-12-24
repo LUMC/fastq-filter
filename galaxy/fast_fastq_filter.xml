@@ -3,8 +3,9 @@
         <requirement type="package" version="0.1.0">fastq-filter</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
-        fastq-filter -o '$output1' \
-        #echo "'" + "|".join(filter + ":" + str(value) for filter, value in $filters) + "'\"
+        #set all_filters = [str(filter['filter']) + ":" + str(filter['filter_threshold']) for filter in $filters]
+        fastq-filter -o '$output1'
+        #echo "|".join($all_filters)
         '$input1'
     ]]></command>
     <inputs>
@@ -12,11 +13,11 @@
         <repeat name="filters" title="Filters">
             <param name="filter" type="select" label="Filter on">
               <option value="min_length">minimum length</option>
-              <option value="max_length">minimum length</option>
+              <option value="max_length">maximum length</option>
               <option value="mean_quality">mean quality</option>
-              <option value="mean_quality">mean quality</option>
+              <option value="median_quality">median quality</option>
             </param>
-            <param name="filter_treshold" type="integer" label="Filter threshold"/>
+            <param name="filter_threshold" type="integer" label="Filter threshold" value="0"/>
         </repeat>
     </inputs>
     <outputs>
