@@ -6,7 +6,7 @@
         fastq-filter -o '$output1' mean_quality:20 '$input1'
     ]]></command>
     <inputs>
-        <param type="data" name="input1" format="gz" />
+        <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
     </inputs>
     <outputs>
         <data name="output1" format="fastq.gz" />
