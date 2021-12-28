@@ -1,4 +1,4 @@
-<tool id="fast_fastq_filter" name="fastq-filter" version="0.1.0" python_template_version="3.5">
+<tool id="fast_fastq_filter" name="fastq-filter" version="0.1.0" python_template_version="3.5" profile="16.04">
     <description>filter FASTQ reads fast</description>
     <requirements>
         <requirement type="package" version="0.1.0">fastq-filter</requirement>
