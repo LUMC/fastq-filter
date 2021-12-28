@@ -22,7 +22,12 @@
         </repeat>
     </inputs>
     <outputs>
+        <!--Fastqsanger format for now. For conditionally applying fastqsanger.gz the tool needs
+         to be updated. An option is using format auto_detect, so we do not have to conditionally set
+         fastqsanger or fastqsanger.gz-->
         <data name="output1" format="fastqsanger" />
+        <!--When the tool is updated for paired input, the optional paired output can probably be
+        found in the cutadapt wrapper -->
     </outputs>
     <tests>
         <test>
