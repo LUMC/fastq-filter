@@ -1,12 +1,12 @@
-<tool id="fast_fastq_filter" name="Filter FASTQ reads" version="0.1.0" python_template_version="3.5">
-    <description>apply one or multiple filters</description>
+<tool id="fast_fastq_filter" name="fastq-filter" version="0.1.0" python_template_version="3.5">
+    <description>filter FASTQ reads fast</description>
     <requirements>
         <requirement type="package" version="0.1.0">fastq-filter</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
         #set all_filters = [str(filter['filter']) + ":" + str(filter['filter_threshold']) for filter in $filters]
         fastq-filter -o '$output1'
-        #echo "|".join($all_filters)
+        #echo "'" + "|".join($all_filters) + "'"
         '$input1'
     ]]></command>
     <inputs>
