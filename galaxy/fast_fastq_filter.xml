@@ -2,6 +2,8 @@
     <description>filter FASTQ reads fast</description>
     <requirements>
         <requirement type="package" version="0.1.0">fastq-filter</requirement>
+        <!-- TODO: Remove this once biocontainer is published -->
+        <container type="docker">quay.io/rhpvorderman/fastq-filter:0.1.0</container>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
         #set all_filters = [str(filter['filter']) + ":" + str(filter['filter_threshold']) for filter in $filters]
