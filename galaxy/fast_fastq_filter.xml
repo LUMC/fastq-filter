@@ -10,14 +10,14 @@
     ]]></command>
     <inputs>
         <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
-        <repeat name="filters" title="Filters" min="1"><!--At least one filter-->
+        <repeat name="filters" title="Filter" min="1">
             <param name="filter" type="select" label="Filter on">
               <option value="min_length">minimum length</option>
               <option value="max_length">maximum length</option>
-              <option value="mean_quality">mean quality</option>
+              <option value="mean_quality" selected="true">mean quality</option>
               <option value="median_quality">median quality</option>
             </param>
-            <param name="filter_threshold" type="integer" label="Filter threshold" value="0"/>
+            <param name="filter_threshold" type="integer" label="Filter threshold" value="20"/>
         </repeat>
     </inputs>
     <outputs>
