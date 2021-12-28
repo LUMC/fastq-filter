@@ -22,7 +22,7 @@
         </repeat>
     </inputs>
     <outputs>
-        <data name="output1" format="fastq.gz" />
+        <data name="output1" format="fastqsanger" />
     </outputs>
     <tests>
         <test>
