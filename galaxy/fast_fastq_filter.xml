@@ -10,7 +10,7 @@
     ]]></command>
     <inputs>
         <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
-        <repeat name="filters" title="Filters">
+        <repeat name="filters" title="Filters" min="1"><!--At least one filter-->
             <param name="filter" type="select" label="Filter on">
               <option value="min_length">minimum length</option>
               <option value="max_length">maximum length</option>
@@ -30,17 +30,19 @@
         </test>
     </tests>
     <help><![CDATA[
-        mean_quality:<quality>         The mean quality of the FASTQ record is equal or above the given quality value.
-        median_quality:<quality>       The median quality of the FASTQ record is equal or above the given quality value.
-        min_length:<length>            The length of the sequence in the FASTQ record is at least min_length
-        max_length:<length>            The length of the sequence in the FASTQ record is at most max_length
+    The following filters are available:
+
+    + mean_quality:<quality>         The mean quality of the FASTQ record is equal or above the given quality value.
+    + median_quality:<quality>       The median quality of the FASTQ record is equal or above the given quality value.
+    + min_length:<length>            The length of the sequence in the FASTQ record is at least min_length
+    + max_length:<length>            The length of the sequence in the FASTQ record is at most max_length
 
     ]]></help>
     <citations>
         <citation type="bibtex">
 @misc{githubfastq-filter,
-  author = {LastTODO, FirstTODO},
-  year = {TODO},
+  author = {Vorderman, Ruben Harmen Paul},
+  year = {2021},
   title = {fastq-filter},
   publisher = {GitHub},
   journal = {GitHub repository},
