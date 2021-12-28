@@ -1,6 +1,6 @@
 categories:
   - Fastq Manipulation
-description: "A fast FASTQ filter program"
+description: "A fast FASTQ filter program that filters on length and quality."
 long_description: |
   A fastq FASTQ filter program
   
