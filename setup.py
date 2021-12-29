@@ -37,7 +37,7 @@ setup(
     version="0.2.0-dev",
     description="A fast FASTQ filter progam.",
     author="Leiden University Medical Center",
-    author_email="sasc@lumc.nl",
+    author_email="r.h.p.vorderman@lumc.nl",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/x-rst",
     license="MIT",
