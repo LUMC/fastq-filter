@@ -2,6 +2,10 @@
   :target: https://pypi.org/project/isal/
   :alt:
 
+.. image:: https://img.shields.io/conda/v/bioconda/fastq-filter.svg
+  :target: https://bioconda.github.io/recipes/fastq-filter/README.html
+  :alt:
+
 .. image:: https://img.shields.io/pypi/pyversions/fastq-filter.svg
   :target: https://pypi.org/project/isal/
   :alt:
@@ -12,6 +16,7 @@
 
 .. image:: https://codecov.io/gh/LUMC/fastq-filter/branch/main/graph/badge.svg?token=E85BEYDQ45
   :target: https://codecov.io/gh/LUMC/fastq-filter
+  :alt:
 
 =============
 fastq-filter
@@ -25,15 +30,9 @@ when calculating the mean.
 Installation
 ============
 
-.. code-block::
-
-    pip install fastq-filter
-
-For the latest development version
-
-.. code-block::
-
-    pip install git+https://github.com/LUMC/fastq-filter
++ With pip: ``pip install fastq-filter``
++ For the latest development version: ``pip install git+https://github.com/LUMC/fastq-filter``
++ With conda ``conda install -c conda-forge -c bioconda fastq-filter``
 
 
 Quickstart
