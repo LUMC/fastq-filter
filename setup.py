@@ -34,10 +34,10 @@ LONG_DESCRIPTION = Path("README.rst").read_text()
 
 setup(
     name="fastq-filter",
-    version="0.1.0",
+    version="0.1.1",
     description="A fast FASTQ filter progam.",
     author="Leiden University Medical Center",
-    author_email="sasc@lumc.nl",
+    author_email="r.h.p.vorderman@lumc.nl",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/x-rst",
     license="MIT",
@@ -47,7 +47,7 @@ setup(
     package_dir={'': 'src'},
     package_data={'fastq_filter': ['*.pyx', '*.pyi']},
     ext_modules=EXT_MODULES,
-    url="https://github.com/lumc/fastq-flter",
+    url="https://github.com/lumc/fastq-filter",
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3",
@@ -55,6 +55,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: MIT License",
     ],
     python_requires=">=3.6",

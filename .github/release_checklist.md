@@ -12,4 +12,4 @@ from CHANGELOG.rst.
 - [ ] Build the new tag on readthedocs. Only build the last patch version of
 each minor version. So `1.1.1` and `1.2.0` but not `1.1.0`, `1.1.1` and `1.2.0`.
 - [ ] Create a new release on github.
-- [ ] Update the package on conda-forge.
+- [ ] Update the package on bioconda.

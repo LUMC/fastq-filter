@@ -1,0 +1,60 @@
+<tool id="fast_fastq_filter" name="fastq-filter" version="0.1.0" python_template_version="3.5" profile="16.04">
+    <description>filter FASTQ reads fast</description>
+    <requirements>
+        <requirement type="package" version="0.1.0">fastq-filter</requirement>
+        <!-- TODO: Remove this once biocontainer is published -->
+        <container type="docker">quay.io/rhpvorderman/fastq-filter:0.1.0</container>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+        #set all_filters = [str(filter['filter']) + ":" + str(filter['filter_threshold']) for filter in $filters]
+        fastq-filter -o '$output1'
+        #echo "'" + "|".join($all_filters) + "'"
+        '$input1'
+    ]]></command>
+    <inputs>
+        <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
+        <repeat name="filters" title="Filter" min="1">
+            <param name="filter" type="select" label="Filter on">
+              <option value="min_length">minimum length</option>
+              <option value="max_length">maximum length</option>
+              <option value="mean_quality" selected="true">mean quality</option>
+              <option value="median_quality">median quality</option>
+            </param>
+            <param name="filter_threshold" type="integer" label="Filter threshold" value="20"/>
+        </repeat>
+    </inputs>
+    <outputs>
+        <!--Fastqsanger format for now. For conditionally applying fastqsanger.gz the tool needs
+         to be updated. An option is using format auto_detect, so we do not have to conditionally set
+         fastqsanger or fastqsanger.gz-->
+        <data name="output1" format="fastqsanger" />
+        <!--When the tool is updated for paired input, the optional paired output can probably be
+        found in the cutadapt wrapper -->
+    </outputs>
+    <tests>
+        <test>
+            <param name="input1" value="input.fastq.gz"/>
+            <output name="output1" file="output.fastq.gz"/>
+        </test>
+    </tests>
+    <help><![CDATA[
+    The following filters are available:
+
+    + mean_quality:<quality>         The mean quality of the FASTQ record is equal or above the given quality value.
+    + median_quality:<quality>       The median quality of the FASTQ record is equal or above the given quality value.
+    + min_length:<length>            The length of the sequence in the FASTQ record is at least min_length
+    + max_length:<length>            The length of the sequence in the FASTQ record is at most max_length
+
+    ]]></help>
+    <citations>
+        <citation type="bibtex">
+@misc{githubfastq-filter,
+  author = {Vorderman, Ruben Harmen Paul},
+  year = {2021},
+  title = {fastq-filter},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  url = {https://github.com/LUMC/fastq-filter},
+}</citation>
+    </citations>
+</tool>

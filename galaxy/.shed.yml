@@ -1,0 +1,28 @@
+categories:
+  - Fastq Manipulation
+description: "A fast FASTQ filter program that filters on length and quality."
+long_description: |
+  A fastq FASTQ filter program
+  
+  This program can apply one or multiple filters on FASTQ files. It works 
+  on plain FASTQ files as well as on compressed (fastq.gz) files.
+  
+  Currently available filters:
+    - min_length
+    - max_length
+    - mean_quality
+    - median_quality
+ 
+  Fastq-filter correctly takes into account that quality scores are log scores
+  when calculating the mean. 
+
+  Fastq-filter contains several optimizations so it can filter reasonably 
+  fast. See the homepage for more details.
+  
+  Bugs in the galaxy wrapper can also be reported on the tool's github 
+  repository. The galaxy wrapper is hosted in the same repository.
+
+homepage_url: "https://github.com/LUMC/fastq-filter"
+name: fast_fastq_filter
+owner: rhpvorderman
+remote_repository_url: "https://github.com/LUMC/fastq-filter/tree/develop/galaxy"
