@@ -141,7 +141,7 @@ def argument_parser() -> argparse.ArgumentParser:
         help="Filters and arguments. For example: mean_quality:20, for "
              "filtering all reads with an average quality below 20. Multiple "
              "filters can be applied by separating with the | symbol. For "
-             "example: min_length:100|mean_quality:20.  Make sure to use "
+             "example: 'min_length:100|mean_quality:20'.  Make sure to use "
              "faster filters (length) before slower ones (quality) for "
              "optimal performance. Use --help-filters to print all the "
              "available filters.")

@@ -61,14 +61,15 @@ Usage
 
 .. code-block::
 
-    usage: fastq-filter [-h] [--help-filters] [-o OUTPUT] filters input
+    usage: fastq-filter [-h] [--help-filters] [-o OUTPUT] [-l COMPRESSION_LEVEL]
+                        filters input
 
     positional arguments:
       filters               Filters and arguments. For example: mean_quality:20,
                             for filtering all reads with an average quality below
                             20. Multiple filters can be applied by separating with
                             the | symbol. For example:
-                            min_length:100|mean_quality:20. Make sure to use
+                            'min_length:100|mean_quality:20'. Make sure to use
                             faster filters (length) before slower ones (quality)
                             for optimal performance. Use --help-filters to print
                             all the available filters.
@@ -81,6 +82,10 @@ Usage
       -o OUTPUT, --output OUTPUT
                             Output FASTQ file. Compression format automatically
                             determined by file extension. Default: stdout.
+      -l COMPRESSION_LEVEL, --compression-level COMPRESSION_LEVEL
+                            Compression level for the output files. Relevant when
+                            output files have a .gz extension. Default: 2
+
 
 Filters
 =======
