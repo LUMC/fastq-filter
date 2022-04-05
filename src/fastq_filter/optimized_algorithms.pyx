@@ -19,6 +19,11 @@
 # SOFTWARE.
 
 from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release, PyBUF_SIMPLE
+from cpython.unicode cimport PyUnicode_CheckExact, PyUnicode_GET_LENGTH
+
+cdef extern from "Python.h":
+    bint PyUnicode_IS_COMPACT_ASCII(object)
+    void * PyUnicode_DATA(object)
 
 from libc.stdint cimport uint8_t
 from libc.string cimport memset, memcmp
@@ -32,28 +37,28 @@ def qualmean(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     Returns the mean of the quality scores in an ASCII quality string as stored
     in a FASTQ file.
     """
-    cdef Py_buffer buffer
-    # Cython makes sure error is handled when acquiring buffer fails.
-    PyObject_GetBuffer(qualities, &buffer, PyBUF_SIMPLE)
-    cdef uint8_t *scores = <uint8_t *>buffer.buf
+    if not PyUnicode_CheckExact(qualities):
+        raise TypeError(f"Qualities must be of type str, got {type(qualities)}")
+    if not PyUnicode_IS_COMPACT_ASCII(qualities):
+        raise ValueError("qualities must be an ASCII string.")
+    cdef uint8_t *scores = <uint8_t *>PyUnicode_DATA(qualities)
+    cdef Py_ssize_t length = PyUnicode_GET_LENGTH(qualities)
     cdef uint8_t score
     cdef double sum_probabilities = 0.0
     cdef double average
-    try:
-        if buffer.len == 0:
-            raise ValueError("Empty quality string")
 
-        for i in range(buffer.len):
-            score = scores[i]
-            if not (phred_offset <= score < 127):
-                raise ValueError(f"Value outside phred range "
-                                 f"({phred_offset}-127) detected in qualities: "
-                                 f"{repr(qualities)}.")
-            sum_probabilities += QUAL_LOOKUP[score - phred_offset]
-        average = sum_probabilities / <double>buffer.len
-        return -10 * log10(average)
-    finally:
-        PyBuffer_Release(&buffer)
+    if length == 0:
+        raise ValueError("Empty quality string")
+
+    for i in range(length):
+        score = scores[i]
+        if not (phred_offset <= score < 127):
+            raise ValueError(f"Value outside phred range "
+                             f"({phred_offset}-127) detected in qualities: "
+                             f"{repr(qualities)}.")
+        sum_probabilities += QUAL_LOOKUP[score - phred_offset]
+    average = sum_probabilities / <double>length
+    return -10 * log10(average)
 
 
 def qualmean_precise(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
@@ -65,25 +70,26 @@ def qualmean_precise(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSE
     comes at the cost of speed.
     """
     cdef PhredHistogram histogram
-    cdef Py_buffer buffer
     cdef double average_probability
     # Cython makes sure error is handled when acquiring buffer fails.
-    PyObject_GetBuffer(qualities, &buffer, PyBUF_SIMPLE)
+    if not PyUnicode_CheckExact(qualities):
+        raise TypeError(f"Qualities must be of type str, got {type(qualities)}")
+    if not PyUnicode_IS_COMPACT_ASCII(qualities):
+        raise ValueError("qualities must be an ASCII string.")
+    cdef uint8_t *scores = <uint8_t *>PyUnicode_DATA(qualities)
+    cdef Py_ssize_t length = PyUnicode_GET_LENGTH(qualities)
 
-    try:
-        if buffer.len == 0:
-            raise ValueError("Empty quality string")
+    if length == 0:
+        raise ValueError("Empty quality string")
 
-        create_phred_histogram(histogram, <uint8_t *>buffer.buf, buffer.len)
-        if not histogram_scores_in_phred_range(histogram, phred_offset):
-            raise ValueError(f"Value outside phred range "
-                             f"({phred_offset}-127) detected in qualities: "
-                             f"{repr(qualities)}.")
-        average_probability = average_probability_from_phred_histogram(histogram, buffer.len, phred_offset)
-        return -10 * log10(average_probability)
-    finally:
-        PyBuffer_Release(&buffer)
- 
+    create_phred_histogram(histogram, scores, length)
+    if not histogram_scores_in_phred_range(histogram, phred_offset):
+        raise ValueError(f"Value outside phred range "
+                         f"({phred_offset}-127) detected in qualities: "
+                         f"{repr(qualities)}.")
+    average_probability = average_probability_from_phred_histogram(histogram, length, phred_offset)
+    return -10 * log10(average_probability)
+
 
 ctypedef Py_ssize_t HistogramInt
 ctypedef HistogramInt[256] PhredHistogram
@@ -108,24 +114,25 @@ def qualmedian(qualities, uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET):
     # array where half or over half of the values have been counted.
 
     cdef PhredHistogram histogram
-    cdef Py_buffer buffer
-    # Cython makes sure error is handled when acquiring buffer fails.
-    PyObject_GetBuffer(qualities, &buffer, PyBUF_SIMPLE)
+    if not PyUnicode_CheckExact(qualities):
+        raise TypeError(f"Qualities must be of type str, got {type(qualities)}")
+    if not PyUnicode_IS_COMPACT_ASCII(qualities):
+        raise ValueError("qualities must be an ASCII string.")
+    cdef uint8_t *scores = <uint8_t *>PyUnicode_DATA(qualities)
+    cdef Py_ssize_t length = PyUnicode_GET_LENGTH(qualities)
 
-    try:
-        if buffer.len == 0:
-            raise ValueError("Empty quality string")
 
-        create_phred_histogram(histogram, <uint8_t *>buffer.buf, buffer.len)
-        if not histogram_scores_in_phred_range(histogram, phred_offset):
-            raise ValueError(f"Value outside phred range "
-                             f"({phred_offset}-127) detected in qualities: "
-                             f"{repr(qualities)}.")
-        return median_from_phred_histogram(histogram, buffer.len, phred_offset)
+    if length == 0:
+        raise ValueError("Empty quality string")
 
-    finally:
-        PyBuffer_Release(&buffer)
- 
+    create_phred_histogram(histogram, scores, length)
+    if not histogram_scores_in_phred_range(histogram, phred_offset):
+        raise ValueError(f"Value outside phred range "
+                         f"({phred_offset}-127) detected in qualities: "
+                         f"{repr(qualities)}.")
+    return median_from_phred_histogram(histogram, length, phred_offset)
+
+
 cdef object median_from_phred_histogram(HistogramInt *histogram,
                                         Py_ssize_t no_items, 
                                         uint8_t phred_offset):

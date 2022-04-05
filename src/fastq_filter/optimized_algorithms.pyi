@@ -21,13 +21,13 @@ from typing import Union
 
 DEFAULT_PHRED_SCORE_OFFSET: int = ...
 
-def qualmedian(qualities: bytes,
+def qualmedian(qualities: str,
                phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
                ) -> Union[int, float]: ...
 
-def qualmean(qualities: bytes,
+def qualmean(qualities: str,
              phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET) -> float: ...
 
-def qualmean_precise(qualities: bytes,
+def qualmean_precise(qualities: str,
                      phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
                      ) -> float: ...
