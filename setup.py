@@ -24,11 +24,10 @@ from Cython.Build import cythonize
 
 from setuptools import Extension, find_packages, setup
 
-EXT_MODULES = cythonize(
+EXT_MODULES = [
     Extension("fastq_filter.optimized_algorithms",
-              ["src/fastq_filter/optimized_algorithms.pyx"]),
-    compiler_directives=dict(language_level="3", binding=True,
-                             cdivision=True, profile=True))
+              ["src/fastq_filter/optimized_algorithms.c"]),
+]
 
 LONG_DESCRIPTION = Path("README.rst").read_text()
 
@@ -45,7 +44,7 @@ setup(
     zip_safe=False,
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    package_data={'fastq_filter': ['*.pyx', '*.pyi']},
+    package_data={'fastq_filter': ['*.c', '*.pyi', '*.h', 'py.typed']},
     ext_modules=EXT_MODULES,
     url="https://github.com/lumc/fastq-filter",
     classifiers=[
