@@ -302,13 +302,13 @@ static PyMethodDef MedianQualityFilter_methods[] = {
     {NULL}, 
 };
 
-static PyMethodDef MinLengthFilter_methods[] = {
+static PyMethodDef MinimumLengthFilter_methods[] = {
     {"passes_filter", (PyCFunction)MinLengthFilter_passes_filter, METH_O,
      GenericSequenceFilter_doc},
     {NULL}, 
 };
 
-static PyMethodDef MaxLengthFilter_methods[] = {
+static PyMethodDef MaximumLengthFilter_methods[] = {
     {"passes_filter", (PyCFunction)MaxLengthFilter_passes_filter, METH_O,
      GenericSequenceFilter_doc},
     {NULL}, 
@@ -324,6 +324,33 @@ static PyTypeObject AverageErrorRateFilter_Type = {
     .tp_members = GenericQualityFilterMembers,
 };
 
+static PyTypeObject MedianQualityFilter_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_filter.MedianQualityFilter",
+    .tp_basicsize = sizeof(FastqFilter),
+    .tp_new = GenericQualityFilter__new__,
+    .tp_methods = MedianQualityFilter_methods,
+    .tp_members = GenericQualityFilterMembers,
+};
+
+static PyTypeObject MinimumLengthFilter_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_filter.MinimumLengthFilter",
+    .tp_basicsize = sizeof(FastqFilter),
+    .tp_new = GenericLengthFilter__new__,
+    .tp_methods = MinimumLengthFilter_methods,
+    .tp_members = GenericLengthFilterMembers,
+};
+
+static PyTypeObject MaximumLengthFilter_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_filter.MaximumLengthFilter",
+    .tp_basicsize = sizeof(FastqFilter),
+    .tp_new = GenericLengthFilter__new__,
+    .tp_methods = MaximumLengthFilter_methods,
+    .tp_members = GenericLengthFilterMembers,
+};
+
 static struct PyModuleDef _filters_module = {
     PyModuleDef_HEAD_INIT,
     "_filters",   /* name of module */
@@ -332,6 +359,13 @@ static struct PyModuleDef _filters_module = {
     NULL  /* module methods */
 };
 
+#define MODULE_ADD_TYPE(module, typename, type) \
+    PyTypeObject *typename = &type; \
+        if (PyType_Ready(typename) == -1) { \
+        return NULL; \
+    } \
+    PyModule_AddObject(module, #typename, \
+                       (PyObject *)typename); 
 
 PyMODINIT_FUNC
 PyInit__filters(void)
@@ -342,11 +376,11 @@ PyInit__filters(void)
     if (m == NULL) {
         return NULL;
     }
+    MODULE_ADD_TYPE(m, AverageErrorRateFilter, AverageErrorRateFilter_Type)
+    MODULE_ADD_TYPE(m, MedianQualityFilter, MedianQualityFilter_Type)
+    MODULE_ADD_TYPE(m, MinimumLengthFilter, MinimumLengthFilter_Type)
+    MODULE_ADD_TYPE(m, MaximumLengthFilter, MaximumLengthFilter_Type)
 
-    PyTypeObject *AverageErrorRateFilter = &AverageErrorRateFilter_Type;
-    if (PyType_Ready(AverageErrorRateFilter) == -1) {
-        return NULL;
-    } 
     PyModule_AddObject(m, "AverageErrorRateFilter", 
                        (PyObject *)AverageErrorRateFilter);
 
