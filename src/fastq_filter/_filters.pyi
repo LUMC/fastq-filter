@@ -18,27 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from abc import ABC, abstractmethod
-from typing import Union
+from _abstracts import Filter
 
-DEFAULT_PHRED_SCORE_OFFSET: int = ...
-
-class Filter(ABC):
-    threshold: Union[int, float]
-    passed: int
-    total: int
-
-    @abstractmethod
-    def __init__(self): ...
-
-    @abstractmethod
-    def passes_filter(self, __values: str) -> bool: ...
+DEFAULT_PHRED_OFFSET: int = ...
 
 class _QualityFilter(Filter):
     phred_offset: int
 
     def __init__(self, threshold: float,
-                 phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET): ...
+                 phred_offset: int = DEFAULT_PHRED_OFFSET): ...
 
     def passes_filter(self, __phred_scores: str) -> bool: ...
 

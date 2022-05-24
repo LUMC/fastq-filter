@@ -26,7 +26,9 @@ import dnaio
 
 import xopen  # type: ignore
 
-from ._filters import (AverageErrorRateFilter, Filter, MaximumLengthFilter,
+from ._abstracts import Filter
+from ._filters import (DEFAULT_PHRED_OFFSET,
+                       AverageErrorRateFilter, MaximumLengthFilter,
                        MedianQualityFilter, MinimumLengthFilter)
 
 DEFAULT_COMPRESSION_LEVEL = 2
