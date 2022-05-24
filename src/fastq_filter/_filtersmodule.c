@@ -208,7 +208,46 @@ MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *phred_scores)
     }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
     Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
+    double median = qualmedian(phreds, phred_length, self->phred_offset);
+    if (median < 0) {
+        return NULL;
+    }
+    self->total += 1;
+    int pass = median >= self->threshold_d;
+    if (pass) {
+        self->pass += 1;
+    }
+    return PyBool_FromLong(pass);
+}
 
+static PyObject * 
+MinLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
+{
+    if (!CheckASCIIString("sequence", sequence)) {
+        return NULL;
+    }
+    Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
+    int pass = length >= self->threshold_i;
+    self->total += 1;
+    if (pass) {
+        self->pass += 1;
+    }
+    return PyBool_FromLong(pass);
+}
+
+static PyObject *
+MaxLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
+{
+    if (!CheckASCIIString("sequence", sequence)) {
+        return NULL;
+    }
+    Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
+    int pass = length <= self->threshold_i;
+    self->total += 1;
+    if (pass) {
+        self->pass += 1;
+    }
+    return PyBool_FromLong(pass);   
 }
 
 static struct PyModuleDef _filters_module = {
