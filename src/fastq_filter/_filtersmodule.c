@@ -122,7 +122,7 @@ typedef struct {
 #define GENERIC_FILTER_MEMBERS \
     {"total", T_ULONGLONG, offsetof(FastqFilter, total), READONLY, \
      "the total number of reads checked by this filter"}, \
-    {"pass", T_ULONGLONG, offsetof(FastqFilter, pass), READONLY, \
+    {"passed", T_ULONGLONG, offsetof(FastqFilter, pass), READONLY, \
      "the total number of reads to pass this filter"},
 
 static PyMemberDef GenericQualityFilterMembers[] = {
@@ -150,7 +150,6 @@ GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs
     static const char *format = "d|$b:";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, format, kwarg_names,
-        &PyUnicode_Type,
         &threshold_d,
         &phred_offset)) {
             return NULL;
@@ -173,9 +172,7 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static const char *format = "n|:";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, format, kwarg_names,
-        &PyUnicode_Type,
-        &threshold_i,
-        &phred_offset)) {
+        &threshold_i)) {
             return NULL;
     }
     FastqFilter *self = PyObject_New(FastqFilter, type);
