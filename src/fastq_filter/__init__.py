@@ -55,15 +55,16 @@ def create_quality_filter(filter_func):
         return filter_func(record.qualities)
     return quality_filter
 
+
 def create_sequence_filter(filter_func):
     def sequence_filter(record: dnaio.SequenceRecord):
         return filter_func(record.sequence)
     return sequence_filter()
 
 
-def filter_fastq(filter_string: str,
-                 input_file: str,
+def filter_fastq(input_file: str,
                  output_file: str,
+                 filters: List[Callable[[dnaio.SequenceRecord], bool]],
                  compression_level: int = DEFAULT_COMPRESSION_LEVEL):
     """
     Filter a FASTQ input file with the filters in filter_string and write
@@ -80,7 +81,7 @@ def filter_fastq(filter_string: str,
     """
     fastq_records = file_to_fastq_records(input_file)
     filtered_fastq_records: Iterable[dnaio.Sequence] = fastq_records
-    for filter_func in filter_string_to_filters(filter_string):
+    for filter_func in filters:
         filtered_fastq_records = filter(filter_func, filtered_fastq_records)
     fastq_records_to_file(filtered_fastq_records, output_file,
                           compression_level=compression_level)
@@ -119,11 +120,15 @@ def argument_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    if "--help-filters" in sys.argv[1:]:
-        print_filter_help()
-        sys.exit(0)
     args = argument_parser().parse_args()
-    filter_fastq(filter_string=args.filters,
+    filters = []
+    filter_functions = []
+    if args.min_length:
+        min_length_filter = MinimumLengthFilter(args.min_length)
+        filters.append(min_length_filter)
+        filter_functions.append(
+            create_sequence_filter(min_length_filter.passes_filter))
+    filter_fastq(filters=filter_functions,
                  input_file=args.input,
                  output_file=args.output,
                  compression_level=args.compression_level)
