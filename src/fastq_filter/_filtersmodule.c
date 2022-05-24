@@ -125,7 +125,7 @@ typedef struct {
     {"pass", T_ULONGLONG, offsetof(FastqFilter, pass), READONLY, \
      "the total number of reads to pass this filter"},
 
-static PyMemberDef GenericDoubleFilterMembers[] = {
+static PyMemberDef GenericQualityFilterMembers[] = {
     GENERIC_FILTER_MEMBERS
     {"threshold", T_DOUBLE, offsetof(FastqFilter, threshold_d), READONLY, 
      "The threshold for this filter."},
@@ -134,7 +134,7 @@ static PyMemberDef GenericDoubleFilterMembers[] = {
     {NULL}
 };
 
-static PyMemberDef GenericIntegerFilterMembers[] = {
+static PyMemberDef GenericLengthFilterMembers[] = {
     GENERIC_FILTER_MEMBERS
     {"threshold", T_PYSSIZET, offsetof(FastqFilter, threshold_i), READONLY, 
      "The threshold for this filter."},
@@ -142,7 +142,7 @@ static PyMemberDef GenericIntegerFilterMembers[] = {
 };
 
 static PyObject *
-GenericDoubleFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
+GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
     uint8_t phred_offset = DEFAULT_PHRED_OFFSET;
     double threshold_d = 0.0L;
@@ -165,7 +165,7 @@ GenericDoubleFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
-GenericIntegerFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
+GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
     uint8_t phred_offset = DEFAULT_PHRED_OFFSET;
     Py_ssize_t threshold_i = 0L;
@@ -318,6 +318,15 @@ static PyMethodDef MaxLengthFilter_methods[] = {
 };
 
 
+static PyTypeObject AverageErrorRateFilter_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_filter.AverageErrorRateFilter",
+    .tp_basicsize = sizeof(FastqFilter),
+    .tp_new = GenericQualityFilter__new__,
+    .tp_methods = AverageErrorRateFilter_methods,
+    .tp_members = GenericQualityFilterMembers,
+};
+
 static struct PyModuleDef _filters_module = {
     PyModuleDef_HEAD_INIT,
     "_filters",   /* name of module */
@@ -325,6 +334,7 @@ static struct PyModuleDef _filters_module = {
     -1,
     NULL  /* module methods */
 };
+
 
 PyMODINIT_FUNC
 PyInit__filters(void)
@@ -335,6 +345,14 @@ PyInit__filters(void)
     if (m == NULL) {
         return NULL;
     }
+
+    PyTypeObject *AverageErrorRateFilter = &AverageErrorRateFilter_Type;
+    if (PyType_Ready(AverageErrorRateFilter) == -1) {
+        return NULL;
+    } 
+    PyModule_AddObject(m, "AverageErrorRateFilter", 
+                       (PyObject *)AverageErrorRateFilter);
+
     PyModule_AddIntMacro(m, DEFAULT_PHRED_OFFSET);
     return m;
 }
