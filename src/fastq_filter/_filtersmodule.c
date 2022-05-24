@@ -20,7 +20,6 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-#include <math.h>
 
 #include "score_to_error_rate.h"
 #define MAXIMUM_PHRED_SCORE 126
@@ -40,7 +39,7 @@ average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phr
     double total_error_rate = 0.0;
     uint8_t score;
     uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
-    for (Py_ssize_t i=0; i<phred_length; i+=1) {
+    for (size_t i=0; i<phred_length; i+=1) {
         score = phred_scores[i] - phred_offset;
         if (score > max_score) {
             PyErr_Format(
@@ -67,7 +66,7 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
     size_t histogram[128];
     uint8_t score;
     uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
-    memset(histogram, 0, 128);
+    memset(histogram, 0, 128 * sizeof(size_t));
     for (size_t i=0; i < phred_length; i+= 1) {
         score = phred_scores[i] - phred_offset;
         if (score > max_score) {
@@ -80,12 +79,12 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
         histogram[phred_scores[i]] += 1;
     }
     int odd_number_of_items = phred_length % 2;
-    int half_of_items = phred_length / 2;  // First middle value of 50 = 25
+    size_t half_of_items = phred_length / 2;  // First middle value of 50 = 25
     if (odd_number_of_items) {
         half_of_items += 1;  // Middle value of 49 = 25
     }
     size_t counted_items = 0;
-    for (size_t i=0; i <= max_score; i+=1) {
+    for (uint8_t i=0; i <= max_score; i+=1) {
         counted_items += histogram[i];
         if (counted_items >= half_of_items) {
             if (odd_number_of_items) { 
@@ -96,7 +95,7 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                 // The two middle values were the same
                 return (double)i;
             } 
-            for (size_t j=i+1; j<max_score; j+=1) {
+            for (uint8_t j=i+1; j<max_score; j+=1) {
                 if (histogram[j] > 0) {
                     return (double)(i + j) / 2.0L;
                 }
@@ -115,7 +114,7 @@ typedef struct {
     size_t pass;
     double threshold_d;
     Py_ssize_t threshold_i;
-    uint8_t phred_offset
+    uint8_t phred_offset;
 } FastqFilter;
 
 static PyObject *
@@ -138,7 +137,7 @@ GenericDoubleFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     self->threshold_i = 0;
     self-> total = 0;
     self->pass = 0;
-    return self;
+    return (PyObject *)self;
 }
 
 static PyObject *
@@ -161,7 +160,7 @@ GenericIntegerFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs
     self->threshold_d = 0.0L;
     self-> total = 0;
     self->pass = 0;
-    return self;
+    return (PyObject *)self;
 }
 
 static int 
