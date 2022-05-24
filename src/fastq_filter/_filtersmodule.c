@@ -21,6 +21,8 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "structmember.h"
+
 #include "score_to_error_rate.h"
 #define MAXIMUM_PHRED_SCORE 126
 #define DEFAULT_PHRED_OFFSET 33
@@ -110,12 +112,34 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
 
 typedef struct {
     PyObject_HEAD
-    size_t total; 
-    size_t pass;
+    unsigned long long total; 
+    unsigned long long pass;
     double threshold_d;
     Py_ssize_t threshold_i;
     uint8_t phred_offset;
 } FastqFilter;
+
+#define GENERIC_FILTER_MEMBERS \
+    {"total", T_ULONGLONG, offsetof(FastqFilter, total), READONLY, \
+     "the total number of reads checked by this filter"}, \
+    {"pass", T_ULONGLONG, offsetof(FastqFilter, pass), READONLY, \
+     "the total number of reads to pass this filter"},
+
+static PyMemberDef GenericDoubleFilterMembers[] = {
+    GENERIC_FILTER_MEMBERS
+    {"threshold", T_DOUBLE, offsetof(FastqFilter, threshold_d), READONLY, 
+     "The threshold for this filter."},
+    {"phred_offset", T_UBYTE, offsetof(FastqFilter, phred_offset), READONLY,
+     "The phred offset used for this filter."},
+    {NULL}
+};
+
+static PyMemberDef GenericIntegerFilterMembers[] = {
+    GENERIC_FILTER_MEMBERS
+    {"threshold", T_PYSSIZET, offsetof(FastqFilter, threshold_i), READONLY, 
+     "The threshold for this filter."},
+    {NULL}
+};
 
 static PyObject *
 GenericDoubleFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
@@ -135,7 +159,7 @@ GenericDoubleFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     self->phred_offset = phred_offset;
     self->threshold_d = threshold_d;
     self->threshold_i = 0;
-    self-> total = 0;
+    self->total = 0;
     self->pass = 0;
     return (PyObject *)self;
 }
@@ -145,8 +169,8 @@ GenericIntegerFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs
 {
     uint8_t phred_offset = DEFAULT_PHRED_OFFSET;
     Py_ssize_t threshold_i = 0L;
-    static char *kwarg_names[] = {"threshold", "phred_offset", NULL};
-    static const char *format = "n|$b:";
+    static char *kwarg_names[] = {"threshold", NULL};
+    static const char *format = "n|:";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, format, kwarg_names,
         &PyUnicode_Type,
