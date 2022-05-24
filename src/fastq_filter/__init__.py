@@ -134,7 +134,7 @@ def argument_parser() -> argparse.ArgumentParser:
                         help="Output FASTQ file. Compression format "
                              "automatically determined by file extension. "
                              "Default: stdout.")
-    parser.add_argument("-l", "--compression-level", type=int,
+    parser.add_argument("-c", "--compression-level", type=int,
                         default=DEFAULT_COMPRESSION_LEVEL,
                         help=f"Compression level for the output files. "
                              f"Relevant when output files have a .gz "
