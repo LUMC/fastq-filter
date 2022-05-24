@@ -204,6 +204,16 @@ CheckASCIIString(const char *argname, PyObject *arg) {
     return 1;
 }
 
+PyDoc_STRVAR(GenericQualityFilter_doc,
+"passes_filter($self, phred_scores, /)\n"
+"--\n"
+"\n"
+"Check if the phred scores pass the filter.\n"
+"\n"
+"  phred_scores\n"
+"    phred_scores as an ASCII-encoded string.\n"
+"\n");
+
 static PyObject *
 AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *phred_scores) 
 {
@@ -244,6 +254,15 @@ MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *phred_scores)
     return PyBool_FromLong(pass);
 }
 
+PyDoc_STRVAR(GenericSequenceFilter_doc,
+"passes_filter($self, sequence, /)\n"
+"--\n"
+"\n"
+"Check if the sequence passes the filter.\n"
+"\n"
+"  sequence\n"
+"    The nucleotide sequence as an ASCII-encoded string.\n"
+"\n");
 static PyObject * 
 MinLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
 {
