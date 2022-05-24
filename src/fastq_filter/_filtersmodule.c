@@ -26,8 +26,16 @@
 #define MAXIMUM_PHRED_SCORE 126
 #define DEFAULT_PHRED_OFFSET 33
 
+/**
+ * @brief Returns the average error rate based on an array of phred scores. 
+ * 
+ * @param phred_scores The array of phred scores.
+ * @param phred_length The length of the phred scores array.
+ * @param phred_offset The offset for the phred scores
+ * @return double The average error rate or -1.0L on error.
+ */
 static double 
-qualmean(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
 {
     double total_error_rate = 0.0;
     uint8_t score;
@@ -46,8 +54,14 @@ qualmean(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
     return total_error_rate / (double)phred_length;
 }
 
-static size_t EMPTY_HISTOGRAM[128] = {0};
-
+/**
+ * @brief Returns a rounded up median phred_score. (i.e. 26.5 -> 27)
+ * 
+ * @param phred_scores Array of phred scores to calculate the median off.
+ * @param phred_length The length of the phred_scores
+ * @param phred_offset The phred offset
+ * @return ssize_t The median, or -1 on error.
+ */
 static ssize_t
 qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
     size_t histogram[128];
@@ -156,30 +170,43 @@ CheckASCIIString(const char *argname, PyObject *arg) {
         PyErr_Format(PyExc_TypeError, 
                      "%s must be of type str, got %s",
                      argname, Py_TYPE(arg)->tp_name);
-        return -1;
+        return 0;
     }
     if (!PyUnicode_IS_COMPACT_ASCII(arg)) {
         PyErr_Format(PyExc_ValueError,
                      "%s must contain only ASCII characters", 
                      argname);
-        return -1;
+        return 0;
     }
-    return 0;
+    return 1;
 }
 
+static PyObject *
+AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *phred_scores) {
+    if (!CheckASCIIString("phred_scores", phred_scores)) {
+        return NULL;
+    }
+    uint8_t *phreds = PyUnicode_DATA(phred_scores);
+    Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
+    double error_rate = average_error_rate(phreds, phred_length, self->phred_offset);
+    if (error_rate < 0) {
+        return NULL; 
+    }
+    self->total += 1;
+    int pass = error_rate >= self->threshold_d;
+    if (pass) {
+        self->pass += 1;
+    }
+    return PyBool_FromLong(pass);
+}
 
-
-static PyMethodDef _filters_functions[] = {
-    QUALMEAN_METHODDEF,
-    {NULL}
-};
 
 static struct PyModuleDef _filters_module = {
     PyModuleDef_HEAD_INIT,
     "_filters",   /* name of module */
     NULL, /* module documentation, may be NULL */
     -1,
-    _filters_functions  /* module methods */
+    NULL  /* module methods */
 };
 
 PyMODINIT_FUNC
