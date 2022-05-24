@@ -126,20 +126,9 @@ def filter_fastq(filter_string: str,
 
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "filters",
-        help="Filters and arguments. For example: mean_quality:20, for "
-             "filtering all reads with an average quality below 20. Multiple "
-             "filters can be applied by separating with the | symbol. For "
-             "example: 'min_length:100|mean_quality:20'.  Make sure to use "
-             "faster filters (length) before slower ones (quality) for "
-             "optimal performance. Use --help-filters to print all the "
-             "available filters.")
     parser.add_argument("input",
                         help="Input FASTQ file. Compression format "
                              "automatically detected. ")
-    parser.add_argument("--help-filters", action="store_true",
-                        help="Print all the available filters.")
     parser.add_argument("-o", "--output",
                         default="-",
                         help="Output FASTQ file. Compression format "
@@ -151,6 +140,19 @@ def argument_parser() -> argparse.ArgumentParser:
                              f"Relevant when output files have a .gz "
                              f"extension. Default: {DEFAULT_COMPRESSION_LEVEL}"
                         )
+    parser.add_argument("-l", "--min-length", type=int,
+                        help="The minimum length for a read.")
+    parser.add_argument("-L", "--max-length", type=int,
+                        help="The maximum length for a read.")
+    parser.add_argument("-e", "--average-error-rate", type=float,
+                        help=f"The minimum average per base error rate.")
+    parser.add_argument("-q", "--mean-quality", type=int,
+                        help="Average quality. Same as the "
+                             "'--average-error-rate' option but specified "
+                             "with a phred score. I.e '-q 30' is equivalent "
+                             "to '-e 0.001'.")
+    parser.add_argument("-Q", "--median-quality", type=int,
+                        help="The minimum median phred score.")
     return parser
 
 
