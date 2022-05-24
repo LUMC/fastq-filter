@@ -80,25 +80,25 @@ qualmean(PyObject *module, PyObject *args, PyObject *kwargs)
     return PyFloat_FromDouble(average_error);
 }
 
-static PyMethodDef optimized_algorithms_functions[] = {
+static PyMethodDef _filters_functions[] = {
     QUALMEAN_METHODDEF,
     {NULL}
 };
 
-static struct PyModuleDef optimized_algorithms_module = {
+static struct PyModuleDef _filters_module = {
     PyModuleDef_HEAD_INIT,
-    "optimized_algorithms",   /* name of module */
+    "_filters",   /* name of module */
     NULL, /* module documentation, may be NULL */
     -1,
-    optimized_algorithms_functions  /* module methods */
+    _filters_functions  /* module methods */
 };
 
 PyMODINIT_FUNC
-PyInit_optimized_algorithms(void)
+PyInit__filters(void)
 {
     PyObject *m;
 
-    m = PyModule_Create(&optimized_algorithms_module);
+    m = PyModule_Create(&_filters_module);
     if (m == NULL) {
         return NULL;
     }

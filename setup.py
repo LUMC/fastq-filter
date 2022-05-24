@@ -25,8 +25,8 @@ from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 
 EXT_MODULES = [
-    Extension("fastq_filter.optimized_algorithms",
-              ["src/fastq_filter/optimized_algorithms.c"]),
+    Extension("fastq_filter._filters",
+              ["src/fastq_filter/_filtersmodule.c"]),
 ]
 
 LONG_DESCRIPTION = Path("README.rst").read_text()
