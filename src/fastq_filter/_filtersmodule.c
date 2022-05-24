@@ -26,10 +26,74 @@
 #define MAXIMUM_PHRED_SCORE 126
 #define DEFAULT_PHRED_OFFSET 33
 
-static PyTypeObject ErrorRateMeanFilter;
-static PyTypeObject QualityMedianFilter;
-static PyTypeObject MinimumLengthFilter;
-static PyTypeObject MaximumLengthFilter;
+static double 
+qualmean(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+{
+    double total_error_rate = 0.0;
+    uint8_t score;
+    uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
+    for (Py_ssize_t i=0; i<phred_length; i+=1) {
+        score = phred_scores[i] - phred_offset;
+        if (score > max_score) {
+            PyErr_Format(
+                PyExc_ValueError,
+                "Character %c outside of valid phred range ('%c' to '%c')",
+                phred_scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
+            return -1.0L;
+        }
+        total_error_rate += SCORE_TO_ERROR_RATE[score];
+    }
+    return total_error_rate / (double)phred_length;
+}
+
+static size_t EMPTY_HISTOGRAM[128] = {0};
+
+static ssize_t
+qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
+    size_t histogram[128];
+    uint8_t score;
+    uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
+    memset(histogram, 0, 128);
+    for (size_t i=0; i < phred_length; i+= 1) {
+        score = phred_scores[i] - phred_offset;
+        if (score > max_score) {
+            PyErr_Format(
+                PyExc_ValueError,
+                "Character %c outside of valid phred range ('%c' to '%c')",
+                phred_scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
+            return -1;
+        }
+        histogram[phred_scores[i]] += 1;
+    }
+    int odd_number_of_items = phred_length % 2;
+    int half_of_items = phred_length / 2;  // First middle value of 50 = 25
+    if (odd_number_of_items) {
+        half_of_items += 1;  // Middle value of 49 = 25
+    }
+    size_t counted_items = 0;
+    for (size_t i=0; i <= max_score; i+=1) {
+        counted_items += histogram[i];
+        if (counted_items >= half_of_items) {
+            if (odd_number_of_items) { 
+                // Only one median value
+                return i;
+            }
+            if (counted_items > half_of_items) {
+                // The two middle values were the same
+                return i;
+            } 
+            for (size_t j=i+1; j<max_score; j+=1) {
+                if (histogram[j] > 0) {
+                    return (i + j + 1) / 2;  // +1 is for always rounding up
+                }
+            } 
+        }
+    } 
+    PyErr_SetString(PyExc_RuntimeError, 
+                    "Unable to find median. This is an error in the code. "
+                    "Please contact the developers.");
+    return -1;
+}
 
 typedef struct {
     PyObject_HEAD
@@ -103,27 +167,7 @@ CheckASCIIString(const char *argname, PyObject *arg) {
     return 0;
 }
 
-static double 
-qualmean(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
-{
-    double total_error_rate = 0.0;
-    uint8_t *scores = PyUnicode_DATA(phred_scores);
-    uint8_t score;
-    uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
-    Py_ssize_t length = PyUnicode_GET_LENGTH(phred_scores);
-    for (Py_ssize_t i=0; i<length; i+=1) {
-        score = scores[i] - phred_offset;
-        if (score > max_score) {
-            PyErr_Format(
-                PyExc_ValueError,
-                "Character %c outside of valid phred range ('%c' to '%c')",
-                scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
-            return -1.0L;
-        }
-        total_error_rate += SCORE_TO_ERROR_RATE[score];
-    }
-    return total_error_rate / (double)length;
-}
+
 
 static PyMethodDef _filters_functions[] = {
     QUALMEAN_METHODDEF,
