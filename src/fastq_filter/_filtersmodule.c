@@ -293,6 +293,31 @@ MaxLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
     return PyBool_FromLong(pass);   
 }
 
+static PyMethodDef AverageErrorRateFilter_methods[] = {
+    {"passes_filter", (PyCFunction)AverageErrorRateFilter_passes_filter, METH_O,
+     GenericQualityFilter_doc},
+    {NULL}, 
+};
+
+static PyMethodDef MedianQualityFilter_methods[] = {
+    {"passes_filter", (PyCFunction)MedianQualityFilter_passes_filter, METH_O,
+     GenericQualityFilter_doc},
+    {NULL}, 
+};
+
+static PyMethodDef MinLengthFilter_methods[] = {
+    {"passes_filter", (PyCFunction)MinLengthFilter_passes_filter, METH_O,
+     GenericSequenceFilter_doc},
+    {NULL}, 
+};
+
+static PyMethodDef MaxLengthFilter_methods[] = {
+    {"passes_filter", (PyCFunction)MaxLengthFilter_passes_filter, METH_O,
+     GenericSequenceFilter_doc},
+    {NULL}, 
+};
+
+
 static struct PyModuleDef _filters_module = {
     PyModuleDef_HEAD_INIT,
     "_filters",   /* name of module */
