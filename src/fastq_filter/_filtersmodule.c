@@ -62,7 +62,7 @@ average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phr
  * @param phred_offset The phred offset
  * @return ssize_t The median, or -1 on error.
  */
-static ssize_t
+static double
 qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
     size_t histogram[128];
     uint8_t score;
@@ -75,7 +75,7 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                 PyExc_ValueError,
                 "Character %c outside of valid phred range ('%c' to '%c')",
                 phred_scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
-            return -1;
+            return -1.0L;
         }
         histogram[phred_scores[i]] += 1;
     }
@@ -90,15 +90,15 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
         if (counted_items >= half_of_items) {
             if (odd_number_of_items) { 
                 // Only one median value
-                return i;
+                return (double)i;
             }
             if (counted_items > half_of_items) {
                 // The two middle values were the same
-                return i;
+                return (double)i;
             } 
             for (size_t j=i+1; j<max_score; j+=1) {
                 if (histogram[j] > 0) {
-                    return (i + j + 1) / 2;  // +1 is for always rounding up
+                    return (double)(i + j) / 2.0L;
                 }
             } 
         }
@@ -106,7 +106,7 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
     PyErr_SetString(PyExc_RuntimeError, 
                     "Unable to find median. This is an error in the code. "
                     "Please contact the developers.");
-    return -1;
+    return -1.0L;
 }
 
 typedef struct {
@@ -182,12 +182,13 @@ CheckASCIIString(const char *argname, PyObject *arg) {
 }
 
 static PyObject *
-AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *phred_scores) {
+AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *phred_scores) 
+{
     if (!CheckASCIIString("phred_scores", phred_scores)) {
         return NULL;
     }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
-    Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
+    Py_ssize_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
     double error_rate = average_error_rate(phreds, phred_length, self->phred_offset);
     if (error_rate < 0) {
         return NULL; 
@@ -200,6 +201,16 @@ AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *phred_scores) 
     return PyBool_FromLong(pass);
 }
 
+static PyObject *
+MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *phred_scores)
+{
+    if (!CheckASCIIString("phred_scores", phred_scores)) {
+        return NULL;
+    }
+    uint8_t *phreds = PyUnicode_DATA(phred_scores);
+    Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
+
+}
 
 static struct PyModuleDef _filters_module = {
     PyModuleDef_HEAD_INIT,
