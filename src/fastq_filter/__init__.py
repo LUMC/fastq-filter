@@ -60,44 +60,6 @@ def create_sequence_filter(filter_func):
         return filter_func(record.sequence)
     return sequence_filter()
 
-FILTERS = {"mean_quality": (AverageErrorRateFilter, (float,), ("quality",), create_quality_filter),
-           "median_quality": (MedianQualityFilter, (float,), ("quality",), create_quality_filter),
-           "min_length": (MinimumLengthFilter, (int,), ("length",), create_sequence_filter),
-           "max_length": (MaximumLengthFilter, (int,), ("length",), create_sequence_filter)}
-
-def print_filter_help():
-    for filter_name, filter_tuple in FILTERS.items():
-        filter_func, _, arg_names, _ = filter_tuple
-        # Reuse the docstring for the filter explanation.
-        # Convert all whitespace in docstring to space.
-        filter_usage = f"{filter_name}:<{'>,<'.join(arg_names)}>"
-        filter_explanation = " ".join(filter_func.__doc__.split())
-        print(f"{filter_usage:<30} {filter_explanation}")
-
-
-def filter_string_to_filters(filter_string: str
-                             ) -> List[Callable[[dnaio.Sequence], bool]]:
-    """Convert a filter string such as 'min_length:50|mean_quality:20 into
-    a list of filter functions that can be used by Python's builtin filter
-    function."""
-    filter_functions: List[Callable[[dnaio.Sequence], bool]] = []
-    filters: List[Filter] = []
-    for single_filter_string in filter_string.split('|'):
-        filter_name, filter_argstring = single_filter_string.split(':')
-        try:
-            filter_class, filter_argtypes, _, converter_func = FILTERS[filter_name]
-        except KeyError:
-            raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
-                             f" {' '.join(FILTERS.keys())}")
-        # Convert the strings from the command line in the appropriate types
-        filter_args = [filter_argtypes[pos](arg) for pos, arg
-                       in enumerate(filter_argstring.split(','))]
-        filter_obj: Filter = filter_class(*filter_args)
-        filters.append(filter_obj)
-        filter_function = converter_func(filter_obj.passes_filter)
-        filter_functions.append(filter_function)
-    return filter_functions
-
 
 def filter_fastq(filter_string: str,
                  input_file: str,
