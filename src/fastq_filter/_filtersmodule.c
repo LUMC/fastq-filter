@@ -26,40 +26,86 @@
 #define MAXIMUM_PHRED_SCORE 126
 #define DEFAULT_PHRED_OFFSET 33
 
-PyDoc_STRVAR(qualmean__doc__,
-"qualmean($self, phred_scores, /, phred_offset=DEFAULT_PHRED_OFFSET)\n"
-"--\n"
-"\n"
-"Returns the average error rate as a float. \n"
-"\n"
-"  phred_scores\n"
-"    ASCII string with the phred scores.\n"
-);
+static PyTypeObject ErrorRateMeanFilter;
+static PyTypeObject QualityMedianFilter;
+static PyTypeObject MinimumLengthFilter;
+static PyTypeObject MaximumLengthFilter;
 
-#define QUALMEAN_METHODDEF    \
-    {"qualmean", (PyCFunction)(void(*)(void))qualmean, \
-     METH_VARARGS | METH_KEYWORDS, qualmean__doc__}
+typedef struct {
+    PyObject_HEAD
+    size_t total; 
+    size_t pass;
+    double threshold_d;
+    Py_ssize_t threshold_i;
+    uint8_t phred_offset
+} FastqFilter;
 
 static PyObject *
-qualmean(PyObject *module, PyObject *args, PyObject *kwargs)
+GenericDoubleFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *phred_scores = NULL;
     uint8_t phred_offset = DEFAULT_PHRED_OFFSET;
-    char *kwarg_names[] = {"", "phred_offset", NULL};
-    const char *format = "O!|$b:qualmean";
+    double threshold_d = 0.0L;
+    static char *kwarg_names[] = {"threshold", "phred_offset", NULL};
+    static const char *format = "d|$b:";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, format, kwarg_names,
         &PyUnicode_Type,
-        &phred_scores,
+        &threshold_d,
         &phred_offset)) {
             return NULL;
     }
+    FastqFilter *self = PyObject_New(FastqFilter, type);
+    self->phred_offset = phred_offset;
+    self->threshold_d = threshold_d;
+    self->threshold_i = 0;
+    self-> total = 0;
+    self->pass = 0;
+    return self;
+}
 
-    if (!PyUnicode_IS_COMPACT_ASCII(phred_scores)) {
-        PyErr_SetString(PyExc_ValueError,
-                        "phred_scores must be ASCII encoded.");
-        return NULL;
+static PyObject *
+GenericIntegerFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
+{
+    uint8_t phred_offset = DEFAULT_PHRED_OFFSET;
+    Py_ssize_t threshold_i = 0L;
+    static char *kwarg_names[] = {"threshold", "phred_offset", NULL};
+    static const char *format = "n|$b:";
+    if (!PyArg_ParseTupleAndKeywords(
+        args, kwargs, format, kwarg_names,
+        &PyUnicode_Type,
+        &threshold_i,
+        &phred_offset)) {
+            return NULL;
     }
+    FastqFilter *self = PyObject_New(FastqFilter, type);
+    self->phred_offset = phred_offset;
+    self->threshold_i = threshold_i;
+    self->threshold_d = 0.0L;
+    self-> total = 0;
+    self->pass = 0;
+    return self;
+}
+
+static int 
+CheckASCIIString(const char *argname, PyObject *arg) {
+    if (!PyUnicode_CheckExact(arg)) {
+        PyErr_Format(PyExc_TypeError, 
+                     "%s must be of type str, got %s",
+                     argname, Py_TYPE(arg)->tp_name);
+        return -1;
+    }
+    if (!PyUnicode_IS_COMPACT_ASCII(arg)) {
+        PyErr_Format(PyExc_ValueError,
+                     "%s must contain only ASCII characters", 
+                     argname);
+        return -1;
+    }
+    return 0;
+}
+
+static double 
+qualmean(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+{
     double total_error_rate = 0.0;
     uint8_t *scores = PyUnicode_DATA(phred_scores);
     uint8_t score;
@@ -72,12 +118,11 @@ qualmean(PyObject *module, PyObject *args, PyObject *kwargs)
                 PyExc_ValueError,
                 "Character %c outside of valid phred range ('%c' to '%c')",
                 scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
-            return NULL;
+            return -1.0L;
         }
         total_error_rate += SCORE_TO_ERROR_RATE[score];
     }
-    double average_error = total_error_rate / (double)length;
-    return PyFloat_FromDouble(average_error);
+    return total_error_rate / (double)length;
 }
 
 static PyMethodDef _filters_functions[] = {
