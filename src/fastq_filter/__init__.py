@@ -29,7 +29,8 @@ import xopen  # type: ignore
 from ._abstracts import Filter
 from ._filters import (DEFAULT_PHRED_SCORE_OFFSET,
                        AverageErrorRateFilter, MaximumLengthFilter,
-                       MedianQualityFilter, MinimumLengthFilter)
+                       MedianQualityFilter, MinimumLengthFilter, qualmean,
+                       qualmedian)
 
 DEFAULT_COMPRESSION_LEVEL = 2
 
