@@ -229,6 +229,7 @@ AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *record)
             "SequenceRecord object with name %R, does not have quality scores "
             "(FASTA record)", PyObject_GetAttrString(record, "name")
         );
+        return NULL;
     }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
     Py_ssize_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
@@ -260,6 +261,7 @@ MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *record)
             "SequenceRecord object with name %R, does not have quality scores "
             "(FASTA record)", PyObject_GetAttrString(record, "name")
         );
+        return NULL;
     }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
     Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
