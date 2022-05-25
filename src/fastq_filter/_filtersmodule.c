@@ -156,13 +156,16 @@ qualmean(PyObject *module, PyObject *args, PyObject *kwargs)
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
     size_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
     double error_rate = average_error_rate(phreds, phred_length, phred_offset);
+    if (error_rate < 0.0L) {
+        return NULL;
+    }
     double phred_score = -10 * log10(error_rate);
     return PyFloat_FromDouble(phred_score);
 }
 
 
 PyDoc_STRVAR(qualmedian__doc__,
-"qualmean($self, phred_scores, /, phred_offset=DEFAULT_PHRED_SCORE_OFFSET)\n"
+"qualmedian($self, phred_scores, /, phred_offset=DEFAULT_PHRED_SCORE_OFFSET)\n"
 "--\n"
 "\n"
 "Returns the median quality score. \n"
@@ -198,6 +201,9 @@ qualmedian_py(PyObject *module, PyObject *args, PyObject *kwargs)
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
     size_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
     double median = qualmedian(phreds, phred_length, phred_offset);
+    if (median < 0.0) {
+        return NULL;
+    }
     return PyFloat_FromDouble(median);
 }
 

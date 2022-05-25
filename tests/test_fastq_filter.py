@@ -27,10 +27,7 @@ from typing import List
 from dnaio import Sequence
 
 import fastq_filter
-from fastq_filter import max_length_filter, \
-    mean_quality_filter, median_quality_filter, min_length_filter, \
-    qualmean, qualmedian
-from fastq_filter.optimized_algorithms import DEFAULT_PHRED_SCORE_OFFSET
+from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, qualmean, qualmedian
 
 import pytest  # type: ignore
 
@@ -91,7 +88,7 @@ NON_ASCII_PHREDS = [chr(x) for x in range(128, 256)]
 def test_outside_range_phreds(func, quals):
     with pytest.raises(ValueError) as error:
         func(quals)
-    assert error.match("Value outside phred range")
+    assert error.match("outside of valid phred range")
 
 
 @pytest.mark.parametrize(["func", "quals"],
