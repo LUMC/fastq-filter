@@ -35,6 +35,36 @@ def quallist_to_string(quallist: List[int]):
     ).tobytes().decode("ascii")
 
 
+def test_average_error_rate_filter_new():
+    filter = AverageErrorRateFilter(0.001, phred_offset=20)
+    assert filter.threshold == 0.001
+    assert filter.phred_offset == 20
+    assert filter.total == 0
+    assert filter.passed == 0
+
+
+def test_median_quality_filter_new():
+    filter = MedianQualityFilter(0.001, phred_offset=20)
+    assert filter.threshold == 0.001
+    assert filter.phred_offset == 20
+    assert filter.total == 0
+    assert filter.passed == 0
+
+
+def test_minimum_length_filter_new():
+    filter = MinimumLengthFilter(20)
+    assert filter.threshold == 20
+    assert filter.total == 0
+    assert filter.passed == 0
+
+
+def test_maximum_length_filter_new():
+    filter = MaximumLengthFilter(20)
+    assert filter.threshold == 20
+    assert filter.total == 0
+    assert filter.passed == 0
+
+
 @pytest.mark.parametrize(
     ["threshold", "qualities", "result"], (
         (0.001, chr(63), True),
