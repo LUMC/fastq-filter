@@ -25,11 +25,37 @@ from fastq_filter import AverageErrorRateFilter, MaximumLengthFilter, \
     MedianQualityFilter, MinimumLengthFilter
 
 
-def test_average_error_rate_filter_pass_higher():
+def test_average_error_rate_new():
     filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
     assert filter.total == 0
     assert filter.passed == 0
+    assert filter.phred_offset == 20
+    assert filter.threshold == 0.001
+
+
+def test_average_error_rate_filter_pass_lower():
+    filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
+    # 60 - 20 = qual 40. Corresponds to 0.0001.
     record = SequenceRecord("name", "A", chr(60))
     assert filter.passes_filter(record)
     assert filter.total == 1
     assert filter.passed == 1
+
+
+def test_average_error_rate_filter_pass_equal():
+    filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
+    # 50 - 20 = qual 30 Corresponds to 0.001.
+    record = SequenceRecord("name", "A", chr(50))
+    assert filter.passes_filter(record)
+    assert filter.total == 1
+    assert filter.passed == 1
+
+
+def test_average_error_rate_filter_fail_higher():
+    filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
+    # 50 - 20 = qual 30 Corresponds to 0.001. 49 is too low.
+    record = SequenceRecord("name", "A", chr(49))
+    assert not filter.passes_filter(record)
+    assert filter.total == 1
+    assert filter.passed == 0
+
