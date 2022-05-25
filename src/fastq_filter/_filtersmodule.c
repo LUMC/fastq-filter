@@ -226,7 +226,7 @@ AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *record)
     if (phred_scores == Py_None) {
         PyErr_Format(
             PyExc_ValueError,
-            "SequenceRecord object with name %R, does not have quality scores "
+            "SequenceRecord object with name %R does not have quality scores "
             "(FASTA record)", PyObject_GetAttrString(record, "name")
         );
         return NULL;
@@ -258,7 +258,7 @@ MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *record)
     if (phred_scores == Py_None) {
         PyErr_Format(
             PyExc_ValueError,
-            "SequenceRecord object with name %R, does not have quality scores "
+            "SequenceRecord object with name %R does not have quality scores "
             "(FASTA record)", PyObject_GetAttrString(record, "name")
         );
         return NULL;
