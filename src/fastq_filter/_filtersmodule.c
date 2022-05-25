@@ -87,7 +87,7 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                 phred_scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
             return -1.0L;
         }
-        histogram[phred_scores[i]] += 1;
+        histogram[score] += 1;
     }
     int odd_number_of_items = phred_length % 2;
     size_t half_of_items = phred_length / 2;  // First middle value of 50 = 25
