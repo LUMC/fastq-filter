@@ -94,7 +94,7 @@ def test_average_error_rate_filter(threshold, qualities, result):
         (8, quallist_to_string([1, 1, 1, 8, 9, 9, 9]), True),
     ))
 def test_median_quality_filter(threshold, qualities, result):
-    filter = AverageErrorRateFilter(threshold)
+    filter = MedianQualityFilter(threshold)
     record = SequenceRecord("name", len(qualities) * 'A', qualities)
     assert filter.passes_filter(record) is result
     assert filter.total == 1
