@@ -27,6 +27,8 @@
 #define MAXIMUM_PHRED_SCORE 126
 #define DEFAULT_PHRED_OFFSET 33
 
+static PyTypeObject *SequenceRecord = NULL;
+
 /**
  * @brief Returns the average error rate based on an array of phred scores. 
  * 
@@ -376,13 +378,19 @@ PyInit__filters(void)
     if (m == NULL) {
         return NULL;
     }
+    PyObject *dnaio = PyImport_ImportModule("dnaio");
+    if (dnaio == NULL) {
+        return NULL;
+    }
+    SequenceRecord = (PyTypeObject *)PyObject_GetAttrString(dnaio, "SequenceRecord");
+    if (SequenceRecord == NULL) {
+        return NULL;
+    }
+
     MODULE_ADD_TYPE(m, AverageErrorRateFilter, AverageErrorRateFilter_Type)
     MODULE_ADD_TYPE(m, MedianQualityFilter, MedianQualityFilter_Type)
     MODULE_ADD_TYPE(m, MinimumLengthFilter, MinimumLengthFilter_Type)
     MODULE_ADD_TYPE(m, MaximumLengthFilter, MaximumLengthFilter_Type)
-
-    PyModule_AddObject(m, "AverageErrorRateFilter", 
-                       (PyObject *)AverageErrorRateFilter);
 
     PyModule_AddIntMacro(m, DEFAULT_PHRED_OFFSET);
     return m;
