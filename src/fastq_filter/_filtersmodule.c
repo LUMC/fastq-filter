@@ -238,7 +238,7 @@ AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *record)
         return NULL; 
     }
     self->total += 1;
-    int pass = error_rate >= self->threshold_d;
+    int pass = error_rate <= self->threshold_d;
     if (pass) {
         self->pass += 1;
     }

@@ -24,6 +24,7 @@ from dnaio import SequenceRecord
 from fastq_filter import AverageErrorRateFilter, MaximumLengthFilter, \
     MedianQualityFilter, MinimumLengthFilter
 
+
 def test_average_error_rate_filter_pass_higher():
     filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
     assert filter.total == 0
