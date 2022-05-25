@@ -17,45 +17,75 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import array
+import itertools
+from typing import List
 
+import pytest
 from dnaio import SequenceRecord
 
-
-from fastq_filter import AverageErrorRateFilter, MaximumLengthFilter, \
+from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, AverageErrorRateFilter, \
+    MaximumLengthFilter, \
     MedianQualityFilter, MinimumLengthFilter
 
 
-def test_average_error_rate_new():
-    filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
-    assert filter.total == 0
-    assert filter.passed == 0
-    assert filter.phred_offset == 20
-    assert filter.threshold == 0.001
+def quallist_to_string(quallist: List[int]):
+    return array.array(
+        "B", [qual + DEFAULT_PHRED_SCORE_OFFSET for qual in quallist]
+    ).tobytes().decode("ascii")
 
 
-def test_average_error_rate_filter_pass_lower():
-    filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
-    # 60 - 20 = qual 40. Corresponds to 0.0001.
-    record = SequenceRecord("name", "A", chr(60))
-    assert filter.passes_filter(record)
+@pytest.mark.parametrize(
+    ["threshold", "qualities", "result"], (
+        (0.001, chr(63), True),
+        (0.001, chr(64), True),
+        (0.001, chr(62), False),
+        (10 ** -(10 / 10), quallist_to_string([9, 9, 9]), False),
+        (10 ** -(8 / 10), quallist_to_string([9, 9, 9]), True)
+    ))
+def test_average_error_rate_filter(threshold, qualities, result):
+    filter = AverageErrorRateFilter(threshold)
+    record = SequenceRecord("name", len(qualities) * 'A', qualities)
+    assert filter.passes_filter(record) is result
     assert filter.total == 1
-    assert filter.passed == 1
+    if result:
+        assert filter.passed == 1
+    else:
+        assert filter.passed == 0
 
 
-def test_average_error_rate_filter_pass_equal():
-    filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
-    # 50 - 20 = qual 30 Corresponds to 0.001.
-    record = SequenceRecord("name", "A", chr(50))
-    assert filter.passes_filter(record)
+@pytest.mark.parametrize(
+    ["threshold", "qualities", "result"], (
+        (30, chr(63), True),
+        (30, chr(64), True),
+        (30, chr(62), False),
+        (10, quallist_to_string([9, 9, 9, 10, 10]), False),
+        (8, quallist_to_string([9, 9, 9]), True),
+        (8, quallist_to_string([1, 1, 1, 8, 9, 9, 9]), True),
+    ))
+def test_median_quality_filter(threshold, qualities, result):
+    filter = AverageErrorRateFilter(threshold)
+    record = SequenceRecord("name", len(qualities) * 'A', qualities)
+    assert filter.passes_filter(record) is result
     assert filter.total == 1
-    assert filter.passed == 1
+    if result:
+        assert filter.passed == 1
+    else:
+        assert filter.passed == 0
 
 
-def test_average_error_rate_filter_fail_higher():
-    filter = AverageErrorRateFilter(threshold=0.001, phred_offset=20)
-    # 50 - 20 = qual 30 Corresponds to 0.001. 49 is too low.
-    record = SequenceRecord("name", "A", chr(49))
-    assert not filter.passes_filter(record)
-    assert filter.total == 1
-    assert filter.passed == 0
+TOO_LOW_PHREDS = [chr(x) for x in range(33)]
+TOO_HIGH_PHREDS = [chr(127)]
+OUTSIDE_RANGE_PHREDS = TOO_LOW_PHREDS + TOO_HIGH_PHREDS
 
+
+@pytest.mark.parametrize(
+    ["filter_class", "quals"],
+    itertools.product([AverageErrorRateFilter, MedianQualityFilter],
+    OUTSIDE_RANGE_PHREDS))
+def test_outside_range(filter_class, quals):
+    record = SequenceRecord("name", "A", quals)
+    filter = filter_class(1)
+    with pytest.raises(ValueError) as error:
+        filter.passes_filter(record)
+    error.match("outside of valid phred range")

@@ -25,7 +25,7 @@
 
 #include "score_to_error_rate.h"
 #define MAXIMUM_PHRED_SCORE 126
-#define DEFAULT_PHRED_OFFSET 33
+#define DEFAULT_PHRED_SCORE_OFFSET 33
 
 static PyTypeObject *SequenceRecord = NULL;
 static PyObject *SequenceAttrString = NULL;
@@ -152,7 +152,7 @@ static PyMemberDef GenericLengthFilterMembers[] = {
 static PyObject *
 GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
-    uint8_t phred_offset = DEFAULT_PHRED_OFFSET;
+    uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
     double threshold_d = 0.0L;
     static char *kwarg_names[] = {"threshold", "phred_offset", NULL};
     static const char *format = "d|$b:";
@@ -174,7 +174,7 @@ GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs
 static PyObject *
 GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
-    uint8_t phred_offset = DEFAULT_PHRED_OFFSET;
+    uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
     Py_ssize_t threshold_i = 0L;
     static char *kwarg_names[] = {"threshold", NULL};
     static const char *format = "n|:";
@@ -424,6 +424,6 @@ PyInit__filters(void)
     MODULE_ADD_TYPE(m, MinimumLengthFilter, MinimumLengthFilter_Type)
     MODULE_ADD_TYPE(m, MaximumLengthFilter, MaximumLengthFilter_Type)
 
-    PyModule_AddIntMacro(m, DEFAULT_PHRED_OFFSET);
+    PyModule_AddIntMacro(m, DEFAULT_PHRED_SCORE_OFFSET);
     return m;
 }

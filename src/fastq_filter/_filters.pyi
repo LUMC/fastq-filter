@@ -20,13 +20,13 @@
 
 from _abstracts import Filter
 
-DEFAULT_PHRED_OFFSET: int = ...
+DEFAULT_PHRED_SCORE_OFFSET: int = ...
 
 class _QualityFilter(Filter):
     phred_offset: int
 
     def __init__(self, threshold: float,
-                 phred_offset: int = DEFAULT_PHRED_OFFSET): ...
+                 phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET): ...
 
 
 class _LengthFilter(Filter):
