@@ -20,6 +20,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <math.h>
 
 #include "structmember.h"
 
@@ -117,6 +118,94 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                     "Please contact the developers.");
     return -1.0L;
 }
+
+PyDoc_STRVAR(qualmean__doc__,
+"qualmean($self, phred_scores, /, phred_offset=DEFAULT_PHRED_SCORE_OFFSET)\n"
+"--\n"
+"\n"
+"Returns the mean quality score. \n"
+"\n"
+"  phred_scores\n"
+"    ASCII string with the phred scores.\n"
+);
+
+#define QUALMEAN_METHODDEF    \
+    {"qualmean", (PyCFunction)(void(*)(void))qualmean, \
+     METH_VARARGS | METH_KEYWORDS, qualmean__doc__}
+
+static PyObject *
+qualmean(PyObject *module, PyObject *args, PyObject *kwargs)
+{
+    PyObject *phred_scores = NULL;
+    uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
+    char *kwarg_names[] = {"", "phred_offset", NULL};
+    const char *format = "O!|$b:qualmean";
+    if (!PyArg_ParseTupleAndKeywords(
+        args, kwargs, format, kwarg_names,
+        &PyUnicode_Type,
+        &phred_scores,
+        &phred_offset)) {
+            return NULL;
+    }
+
+    if (!PyUnicode_IS_COMPACT_ASCII(phred_scores)) {
+        PyErr_SetString(PyExc_ValueError,
+                        "phred_scores must be ASCII encoded.");
+        return NULL;
+    }
+    uint8_t *phreds = PyUnicode_DATA(phred_scores);
+    size_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
+    double error_rate = average_error_rate(phreds, phred_length, phred_offset);
+    double phred_score = -10 * log10(error_rate);
+    return PyFloat_FromDouble(phred_score);
+}
+
+
+PyDoc_STRVAR(qualmedian__doc__,
+"qualmean($self, phred_scores, /, phred_offset=DEFAULT_PHRED_SCORE_OFFSET)\n"
+"--\n"
+"\n"
+"Returns the median quality score. \n"
+"\n"
+"  phred_scores\n"
+"    ASCII string with the phred scores.\n"
+);
+
+#define QUALMEDIAN_METHODDEF    \
+    {"qualmedian", (PyCFunction)(void(*)(void))qualmedian_py, \
+     METH_VARARGS | METH_KEYWORDS, qualmedian__doc__}
+
+static PyObject *
+qualmedian_py(PyObject *module, PyObject *args, PyObject *kwargs)
+{
+    PyObject *phred_scores = NULL;
+    uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
+    char *kwarg_names[] = {"", "phred_offset", NULL};
+    const char *format = "O!|$b:qualmedian";
+    if (!PyArg_ParseTupleAndKeywords(
+        args, kwargs, format, kwarg_names,
+        &PyUnicode_Type,
+        &phred_scores,
+        &phred_offset)) {
+            return NULL;
+    }
+
+    if (!PyUnicode_IS_COMPACT_ASCII(phred_scores)) {
+        PyErr_SetString(PyExc_ValueError,
+                        "phred_scores must be ASCII encoded.");
+        return NULL;
+    }
+    uint8_t *phreds = PyUnicode_DATA(phred_scores);
+    size_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
+    double median = qualmedian(phreds, phred_length, phred_offset);
+    return PyFloat_FromDouble(median);
+}
+
+static PyMethodDef _filters_functions[] = {
+    QUALMEAN_METHODDEF,
+    QUALMEDIAN_METHODDEF,
+    {NULL}
+};
 
 typedef struct {
     PyObject_HEAD
@@ -382,7 +471,7 @@ static struct PyModuleDef _filters_module = {
     "_filters",   /* name of module */
     NULL, /* module documentation, may be NULL */
     -1,
-    NULL  /* module methods */
+    _filters_functions  /* module methods */
 };
 
 #define MODULE_ADD_TYPE(module, typename, type) \
