@@ -31,7 +31,6 @@ static PyTypeObject *SequenceRecord = NULL;
 static PyObject *SequenceAttrString = NULL;
 static PyObject *QualitiesAttrString = NULL;
 
-#define SequenceRecord_CheckExact(o) (Py_TYPE(o) == SequenceRecord)
 #define SequenceRecord_GetSequence(o) PyObject_GetAttr(o, SequenceAttrString)
 #define SequenceRecord_GetQualities(o) PyObject_GetAttr(o, QualitiesAttrString)
 
@@ -197,7 +196,7 @@ static int
 CheckSequenceRecord(PyObject *arg) {
     if (!(Py_TYPE(arg) == SequenceRecord)) {
         PyErr_Format(PyExc_TypeError, 
-                     "record must be of type str, got %s", 
+                     "record must be of type dnaio.SequenceRecord, got %s", 
                      Py_TYPE(arg)->tp_name);
         return 0;
     }
