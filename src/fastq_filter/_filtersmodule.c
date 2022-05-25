@@ -28,6 +28,13 @@
 #define DEFAULT_PHRED_OFFSET 33
 
 static PyTypeObject *SequenceRecord = NULL;
+static PyObject *SequenceAttrString = NULL;
+static PyObject *QualitiesAttrString = NULL;
+
+#define SequenceRecord_CheckExact(o) (Py_TYPE(o) == SequenceRecord)
+#define SequenceRecord_GetSequence(o) PyObject_GetAttr(o, SequenceAttrString)
+#define SequenceRecord_GetQualities(o) PyObject_GetAttr(o, QualitiesAttrString)
+
 
 /**
  * @brief Returns the average error rate based on an array of phred scores. 
@@ -187,36 +194,34 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static int 
-CheckASCIIString(const char *argname, PyObject *arg) {
-    if (!PyUnicode_CheckExact(arg)) {
+CheckSequenceRecord(PyObject *arg) {
+    if (!(Py_TYPE(arg) == SequenceRecord)) {
         PyErr_Format(PyExc_TypeError, 
-                     "%s must be of type str, got %s",
-                     argname, Py_TYPE(arg)->tp_name);
-        return 0;
-    }
-    if (!PyUnicode_IS_COMPACT_ASCII(arg)) {
-        PyErr_Format(PyExc_ValueError,
-                     "%s must contain only ASCII characters", 
-                     argname);
+                     "record must be of type str, got %s", 
+                     Py_TYPE(arg)->tp_name);
         return 0;
     }
     return 1;
 }
 
-PyDoc_STRVAR(GenericQualityFilter_doc,
-"passes_filter($self, phred_scores, /)\n"
+PyDoc_STRVAR(GenericPassesFilter_doc,
+"passes_filter($self, record, /)\n"
 "--\n"
 "\n"
-"Check if the phred scores pass the filter.\n"
+"Check if the record passes the filter.\n"
 "\n"
-"  phred_scores\n"
-"    phred_scores as an ASCII-encoded string.\n"
+"  record\n"
+"    dnaio.SequenceRecord object.\n"
 "\n");
 
 static PyObject *
-AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *phred_scores) 
+AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *record) 
 {
-    if (!CheckASCIIString("phred_scores", phred_scores)) {
+    if (!CheckSequenceRecord(record)) {
+        return NULL;
+    }
+    PyObject *phred_scores = SequenceRecord_GetQualities(record);
+    if (phred_scores == NULL) {
         return NULL;
     }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
@@ -234,9 +239,13 @@ AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *phred_scores)
 }
 
 static PyObject *
-MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *phred_scores)
+MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *record)
 {
-    if (!CheckASCIIString("phred_scores", phred_scores)) {
+    if (!CheckSequenceRecord(record)) {
+        return NULL;
+    }
+    PyObject *phred_scores = SequenceRecord_GetQualities(record);
+    if (phred_scores == NULL) {
         return NULL;
     }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
@@ -253,19 +262,15 @@ MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *phred_scores)
     return PyBool_FromLong(pass);
 }
 
-PyDoc_STRVAR(GenericSequenceFilter_doc,
-"passes_filter($self, sequence, /)\n"
-"--\n"
-"\n"
-"Check if the sequence passes the filter.\n"
-"\n"
-"  sequence\n"
-"    The nucleotide sequence as an ASCII-encoded string.\n"
-"\n");
+
 static PyObject * 
-MinLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
+MinLengthFilter_passes_filter(FastqFilter *self, PyObject *record)
 {
-    if (!CheckASCIIString("sequence", sequence)) {
+    if (!CheckSequenceRecord(record)) {
+        return NULL;
+    }
+    PyObject *sequence = SequenceRecord_GetSequence(record);
+    if (sequence == NULL) {
         return NULL;
     }
     Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
@@ -278,11 +283,15 @@ MinLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
 }
 
 static PyObject *
-MaxLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
+MaxLengthFilter_passes_filter(FastqFilter *self, PyObject *record)
 {
-    if (!CheckASCIIString("sequence", sequence)) {
+    if (!CheckSequenceRecord(record)) {
         return NULL;
     }
+    PyObject *sequence = SequenceRecord_GetSequence(record);
+    if (sequence == NULL) {
+        return NULL;
+    }    
     Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
     int pass = length <= self->threshold_i;
     self->total += 1;
@@ -294,25 +303,25 @@ MaxLengthFilter_passes_filter(FastqFilter *self, PyObject *sequence)
 
 static PyMethodDef AverageErrorRateFilter_methods[] = {
     {"passes_filter", (PyCFunction)AverageErrorRateFilter_passes_filter, METH_O,
-     GenericQualityFilter_doc},
+     GenericPassesFilter_doc},
     {NULL}, 
 };
 
 static PyMethodDef MedianQualityFilter_methods[] = {
     {"passes_filter", (PyCFunction)MedianQualityFilter_passes_filter, METH_O,
-     GenericQualityFilter_doc},
+     GenericPassesFilter_doc},
     {NULL}, 
 };
 
 static PyMethodDef MinimumLengthFilter_methods[] = {
     {"passes_filter", (PyCFunction)MinLengthFilter_passes_filter, METH_O,
-     GenericSequenceFilter_doc},
+     GenericPassesFilter_doc},
     {NULL}, 
 };
 
 static PyMethodDef MaximumLengthFilter_methods[] = {
     {"passes_filter", (PyCFunction)MaxLengthFilter_passes_filter, METH_O,
-     GenericSequenceFilter_doc},
+     GenericPassesFilter_doc},
     {NULL}, 
 };
 
@@ -385,6 +394,14 @@ PyInit__filters(void)
     SequenceRecord = (PyTypeObject *)PyObject_GetAttrString(dnaio, "SequenceRecord");
     if (SequenceRecord == NULL) {
         return NULL;
+    }
+    SequenceAttrString = PyUnicode_FromString("sequence");
+    if (SequenceAttrString == NULL) {
+        return NULL;
+    }
+    QualitiesAttrString = PyUnicode_FromString("qualities");
+    if (QualitiesAttrString == NULL) {
+        return NULL; 
     }
 
     MODULE_ADD_TYPE(m, AverageErrorRateFilter, AverageErrorRateFilter_Type)
