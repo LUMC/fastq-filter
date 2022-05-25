@@ -223,6 +223,13 @@ AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *record)
     if (phred_scores == NULL) {
         return NULL;
     }
+    if (phred_scores == Py_None) {
+        PyErr_Format(
+            PyExc_ValueError,
+            "SequenceRecord object with name %R, does not have quality scores "
+            "(FASTA record)", PyObject_GetAttrString(record, "name")
+        );
+    }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
     Py_ssize_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
     double error_rate = average_error_rate(phreds, phred_length, self->phred_offset);
@@ -246,6 +253,13 @@ MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *record)
     PyObject *phred_scores = SequenceRecord_GetQualities(record);
     if (phred_scores == NULL) {
         return NULL;
+    }
+    if (phred_scores == Py_None) {
+        PyErr_Format(
+            PyExc_ValueError,
+            "SequenceRecord object with name %R, does not have quality scores "
+            "(FASTA record)", PyObject_GetAttrString(record, "name")
+        );
     }
     uint8_t *phreds = PyUnicode_DATA(phred_scores);
     Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
