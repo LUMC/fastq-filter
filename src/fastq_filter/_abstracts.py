@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Union
 
+from dnaio import SequenceRecord
+
+
 class Filter(ABC):
     threshold: Union[int, float]
     passed: int
@@ -9,6 +12,5 @@ class Filter(ABC):
     @abstractmethod
     def __init__(self): ...
 
-    @abstractmethod
-    def passes_filter(self, __values: str) -> bool: ...
+    def passes_filter(self, __record: SequenceRecord) -> bool: ...
 
