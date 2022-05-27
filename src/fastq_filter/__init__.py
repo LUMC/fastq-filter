@@ -19,7 +19,6 @@
 # SOFTWARE.
 import argparse
 import functools
-import warnings
 from typing import Callable, Generator, Iterable, List
 
 import dnaio
