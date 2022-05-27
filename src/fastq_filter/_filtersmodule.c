@@ -287,31 +287,36 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     return (PyObject *)self;
 }
 
-static int 
-CheckSequenceRecord(PyObject *arg) {
+static PyObject *
+GenericFilter_ParseArgsToRecord(PyObject *args, PyObject *kwargs) 
+{
+    if (kwargs != NULL) {
+        PyErr_Format(PyExc_TypeError, 
+                     "filter takes exactly 0 keyword arguments, got %d",
+                     PyDict_GET_SIZE(kwargs));
+        return NULL;
+    }
+    if (PyTuple_GET_SIZE(args) != 1) {
+        PyErr_Format(PyExc_TypeError, 
+                     "filter takes exactly 1 positional argument, got %d",
+                     PyTuple_GET_SIZE(args));
+        return NULL;
+    }
+    PyObject *arg = PyTuple_GET_ITEM(args, 0);
     if (!(Py_TYPE(arg) == SequenceRecord)) {
         PyErr_Format(PyExc_TypeError, 
                      "record must be of type dnaio.SequenceRecord, got %s", 
                      Py_TYPE(arg)->tp_name);
-        return 0;
+        return NULL;
     }
-    return 1;
+    return arg;
 }
 
-PyDoc_STRVAR(GenericPassesFilter_doc,
-"passes_filter($self, record, /)\n"
-"--\n"
-"\n"
-"Check if the record passes the filter.\n"
-"\n"
-"  record\n"
-"    dnaio.SequenceRecord object.\n"
-"\n");
-
 static PyObject *
-AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *record) 
+AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    if (!CheckSequenceRecord(record)) {
+    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
+    if (record == NULL) {
         return NULL;
     }
     PyObject *phred_scores = SequenceRecord_GetQualities(record);
@@ -341,9 +346,10 @@ AverageErrorRateFilter_passes_filter(FastqFilter *self, PyObject *record)
 }
 
 static PyObject *
-MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *record)
+MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    if (!CheckSequenceRecord(record)) {
+    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
+    if (record == NULL) {
         return NULL;
     }
     PyObject *phred_scores = SequenceRecord_GetQualities(record);
@@ -374,9 +380,10 @@ MedianQualityFilter_passes_filter(FastqFilter *self, PyObject *record)
 
 
 static PyObject * 
-MinLengthFilter_passes_filter(FastqFilter *self, PyObject *record)
+MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 {
-    if (!CheckSequenceRecord(record)) {
+    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
+    if (record == NULL) {
         return NULL;
     }
     PyObject *sequence = SequenceRecord_GetSequence(record);
@@ -393,9 +400,10 @@ MinLengthFilter_passes_filter(FastqFilter *self, PyObject *record)
 }
 
 static PyObject *
-MaxLengthFilter_passes_filter(FastqFilter *self, PyObject *record)
+MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    if (!CheckSequenceRecord(record)) {
+    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
+    if (record == NULL) {
         return NULL;
     }
     PyObject *sequence = SequenceRecord_GetSequence(record);
@@ -411,37 +419,12 @@ MaxLengthFilter_passes_filter(FastqFilter *self, PyObject *record)
     return PyBool_FromLong(pass);   
 }
 
-static PyMethodDef AverageErrorRateFilter_methods[] = {
-    {"passes_filter", (PyCFunction)AverageErrorRateFilter_passes_filter, METH_O,
-     GenericPassesFilter_doc},
-    {NULL}, 
-};
-
-static PyMethodDef MedianQualityFilter_methods[] = {
-    {"passes_filter", (PyCFunction)MedianQualityFilter_passes_filter, METH_O,
-     GenericPassesFilter_doc},
-    {NULL}, 
-};
-
-static PyMethodDef MinimumLengthFilter_methods[] = {
-    {"passes_filter", (PyCFunction)MinLengthFilter_passes_filter, METH_O,
-     GenericPassesFilter_doc},
-    {NULL}, 
-};
-
-static PyMethodDef MaximumLengthFilter_methods[] = {
-    {"passes_filter", (PyCFunction)MaxLengthFilter_passes_filter, METH_O,
-     GenericPassesFilter_doc},
-    {NULL}, 
-};
-
-
 static PyTypeObject AverageErrorRateFilter_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "_filter.AverageErrorRateFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_new = GenericQualityFilter__new__,
-    .tp_methods = AverageErrorRateFilter_methods,
+    .tp_call = (ternaryfunc)AverageErrorRateFilter__call__,
     .tp_members = GenericQualityFilterMembers,
 };
 
@@ -450,7 +433,7 @@ static PyTypeObject MedianQualityFilter_Type = {
     .tp_name = "_filter.MedianQualityFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_new = GenericQualityFilter__new__,
-    .tp_methods = MedianQualityFilter_methods,
+    .tp_call = (ternaryfunc)MedianQualityFilter__call__,
     .tp_members = GenericQualityFilterMembers,
 };
 
@@ -459,7 +442,7 @@ static PyTypeObject MinimumLengthFilter_Type = {
     .tp_name = "_filter.MinimumLengthFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_new = GenericLengthFilter__new__,
-    .tp_methods = MinimumLengthFilter_methods,
+    .tp_call = (ternaryfunc)MinLengthFilter__call__,
     .tp_members = GenericLengthFilterMembers,
 };
 
@@ -468,7 +451,7 @@ static PyTypeObject MaximumLengthFilter_Type = {
     .tp_name = "_filter.MaximumLengthFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_new = GenericLengthFilter__new__,
-    .tp_methods = MaximumLengthFilter_methods,
+    .tp_call = (ternaryfunc)MaxLengthFilter__call__,
     .tp_members = GenericLengthFilterMembers,
 };
 

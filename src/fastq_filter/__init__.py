@@ -123,13 +123,10 @@ def argument_parser() -> argparse.ArgumentParser:
 def main():
     args = argument_parser().parse_args()
     filters = []
-    filter_functions = []
     if args.min_length:
         min_length_filter = MinimumLengthFilter(args.min_length)
         filters.append(min_length_filter)
-        filter_functions.append(
-            create_sequence_filter(min_length_filter.passes_filter))
-    filter_fastq(filters=filter_functions,
+    filter_fastq(filters=filters,
                  input_file=args.input,
                  output_file=args.output,
                  compression_level=args.compression_level)

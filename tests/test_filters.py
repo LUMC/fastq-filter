@@ -76,7 +76,7 @@ def test_maximum_length_filter_new():
 def test_average_error_rate_filter(threshold, qualities, result):
     filter = AverageErrorRateFilter(threshold)
     record = SequenceRecord("name", len(qualities) * 'A', qualities)
-    assert filter.passes_filter(record) is result
+    assert filter(record) is result
     assert filter.total == 1
     if result:
         assert filter.passed == 1
@@ -96,7 +96,7 @@ def test_average_error_rate_filter(threshold, qualities, result):
 def test_median_quality_filter(threshold, qualities, result):
     filter = MedianQualityFilter(threshold)
     record = SequenceRecord("name", len(qualities) * 'A', qualities)
-    assert filter.passes_filter(record) is result
+    assert filter(record) is result
     assert filter.total == 1
     if result:
         assert filter.passed == 1
@@ -117,5 +117,5 @@ def test_outside_range(filter_class, quals):
     record = SequenceRecord("name", "A", quals)
     filter = filter_class(1)
     with pytest.raises(ValueError) as error:
-        filter.passes_filter(record)
+        filter(record)
     error.match("outside of valid phred range")
