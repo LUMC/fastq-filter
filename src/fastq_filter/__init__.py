@@ -19,6 +19,7 @@
 # SOFTWARE.
 import argparse
 import functools
+import warnings
 from typing import Callable, Generator, Iterable, List
 
 import dnaio
@@ -94,6 +95,7 @@ def filter_fastq(input_file: str,
 
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
+    parser.description = "Filter FASTQ files on various metrics."
     parser.add_argument("input",
                         help="Input FASTQ file. Compression format "
                              "automatically detected. ")
