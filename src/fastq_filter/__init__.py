@@ -19,7 +19,6 @@
 # SOFTWARE.
 import argparse
 import functools
-import sys
 from typing import Callable, Generator, Iterable, List
 
 import dnaio
@@ -49,18 +48,6 @@ def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str,
                      compresslevel=compression_level) as output_h:
         for record in records:
             output_h.write(record.fastq_bytes())
-
-
-def create_quality_filter(filter_func):
-    def quality_filter(record: dnaio.SequenceRecord):
-        return filter_func(record.qualities)
-    return quality_filter
-
-
-def create_sequence_filter(filter_func):
-    def sequence_filter(record: dnaio.SequenceRecord):
-        return filter_func(record.sequence)
-    return sequence_filter()
 
 
 def filter_fastq(input_file: str,
