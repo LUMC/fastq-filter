@@ -63,16 +63,19 @@ def quallist_to_string(quallist: List[int]):
 
 @pytest.mark.parametrize(
     ["threshold", "qualities", "result"], (
-        (0.001, chr(63), True),
-        (0.001, chr(64), True),
-        (0.001, chr(62), False),
-        (10 ** -(10 / 10), quallist_to_string([9, 9, 9]), False),
-        (10 ** -(8 / 10), quallist_to_string([9, 9, 9]), True)
+        (0.001, [chr(63)], True),
+        (0.001, [chr(64)], True),
+        (0.001, [chr(62)], False),
+        (10 ** -(10 / 10), [quallist_to_string([9, 9, 9])], False),
+        (10 ** -(8 / 10), [quallist_to_string([9, 9, 9])], True),
+        (10 ** -(8 / 10), [quallist_to_string([8, 8, 8]),
+                           quallist_to_string([8, 7, 8])], False),
     ))
 def test_average_error_rate_filter(threshold, qualities, result):
     filter = AverageErrorRateFilter(threshold)
-    record = SequenceRecord("name", len(qualities) * 'A', qualities)
-    assert filter(record) is result
+    records = [SequenceRecord("name", len(qual) * 'A', qual)
+               for qual in qualities]
+    assert filter(tuple(records)) is result
     # assert filter.total == 1
     # if result:
     #     assert filter.passed == 1
@@ -123,15 +126,18 @@ def test_outside_range(filter_class, quals):
 
 
 @pytest.mark.parametrize(
-    ["threshold", "length", "result"], (
-        (10, 10, True),
-        (11, 10, True),
-        (10, 11, False),
+    ["threshold", "lengths", "result"], (
+        (10, [10], True),
+        (11, [10], True),
+        (10, [11], False),
+        (10, [11, 10], False),
+        (10, [10, 9], True)
     ))
-def test_maximum_length_filter(threshold, length, result):
+def test_maximum_length_filter(threshold, lengths, result):
     filter = MaximumLengthFilter(threshold)
-    record = SequenceRecord("name", length * 'A', length * 'H')
-    assert filter((record,)) is result
+    records = [SequenceRecord("name", length * 'A', length * 'H')
+               for length in lengths]
+    assert filter(tuple(records)) is result
     # assert filter.total == 1
     # if result:
     #     assert filter.passed == 1
@@ -139,15 +145,20 @@ def test_maximum_length_filter(threshold, length, result):
     #     assert filter.passed == 0
 
 @pytest.mark.parametrize(
-    ["threshold", "length", "result"], (
-        (10, 10, True),
-        (11, 10, False),
-        (10, 11, True),
+    ["threshold", "lengths", "result"], (
+        (10, [10], True),
+        (11, [10], False),
+        (10, [11], True),
+        (10, [11, 10], True),
+        (10, [10, 9], True),
+        (10, [10, 8, 8], True),
+        (10, [9, 9], False)
     ))
-def test_minimum_length_filter(threshold, length, result):
+def test_minimum_length_filter(threshold, lengths, result):
     filter = MinimumLengthFilter(threshold)
-    record = SequenceRecord("name", length * 'A', length * 'H')
-    assert filter((record,)) is result
+    records = [SequenceRecord("name", length * 'A', length * 'H')
+               for length in lengths]
+    assert filter(tuple(records)) is result
     # assert filter.total == 1
     # if result:
     #     assert filter.passed == 1

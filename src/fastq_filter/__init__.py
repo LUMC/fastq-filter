@@ -131,7 +131,7 @@ def MaximumLengthFilter(threshold: int):
         return len(record) <= threshold
 
     def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        return any(map(filterfunc, records))
+        return all(map(filterfunc, records))
 
     return combined_filter
 
