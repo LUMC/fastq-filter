@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.3.4
-      - name: Set up Python 3.6
+      - name: Set up Python 3.7
         uses: actions/setup-python@v2.2.1
         with:
-          python-version: 3.6
+          python-version: 3.7
       - name: Install tox
         run: pip install tox
       - name: Lint
@@ -31,37 +31,33 @@ jobs:
       matrix:
         tox_env:
           - twine_check
-    needs: lint
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2.3.4
-      - name: Set up Python 3.6
+      - name: Set up Python 3.7
         uses: actions/setup-python@v2.2.1
         with:
-          python-version: 3.6
+          python-version: 3.7
       - name: Install tox and upgrade setuptools and pip
         run: pip install --upgrade tox setuptools pip
       - name: Run tox -e ${{ matrix.tox_env }}
         run: tox -e ${{ matrix.tox_env }}
 
   test:
-    needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version:
-          - "3.6"
           - "3.7"
           - "3.8"
           - "3.9"
           - "3.10"
-          - "pypy-3.7"
         os: ["ubuntu-latest"]
         include:
           - os: "macos-latest"
-            python-version: 3.6
+            python-version: 3.7
           - os: "windows-latest"
-            python-version: 3.6
+            python-version: 3.7
     steps:
       - uses: actions/checkout@v2.3.4
       - name: Set up Python ${{ matrix.python-version }}

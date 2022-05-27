@@ -18,21 +18,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import argparse
+import contextlib
 import functools
-import sys
-from typing import Callable, Generator, Iterable, List
+from typing import Callable, Iterable, Iterator, List, Tuple
 
 import dnaio
 
 import xopen  # type: ignore
 
-from .optimized_algorithms import qualmean, qualmedian
+from ._filters import (
+    DEFAULT_PHRED_SCORE_OFFSET,
+    average_error_rate,
+    qualmean,
+    qualmedian
+)
+
+__version__ = "0.2.0"
+
+__all__ = [
+    "file_to_fastq_records",
+    "fastq_records_to_file",
+    "filter_fastq",
+    "AverageErrorRateFilter",
+    "MaximumLengthFilter",
+    "MedianQualityFilter",
+    "MinimumLengthFilter",
+    "qualmean",
+    "qualmedian",
+    "DEFAULT_PHRED_SCORE_OFFSET"
+]
 
 DEFAULT_COMPRESSION_LEVEL = 2
 
 
-def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
-                                                      None, None]:
+def file_to_fastq_records(filepath: str) -> Iterator[dnaio.Sequence]:
     """Parse a FASTQ file into a generator of Sequence objects"""
     opener = functools.partial(xopen.xopen, threads=0)
     with dnaio.open(filepath, opener=opener) as record_h:  # type: ignore
@@ -47,115 +66,121 @@ def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str,
             output_h.write(record.fastq_bytes())
 
 
-def mean_quality_filter(quality: float, record: dnaio.Sequence) -> bool:
-    """The mean quality of the FASTQ record is equal or above the given
-    quality value."""
-    return qualmean(record.qualities_as_bytes()) >= quality  # type: ignore
-
-
-def median_quality_filter(quality: float, record: dnaio.Sequence) -> bool:
-    """The median quality of the FASTQ record is equal or above the given
-    quality value."""
-    return qualmedian(record.qualities_as_bytes()) >= quality  # type: ignore
-
-
-def min_length_filter(min_length: int, record: dnaio.Sequence) -> bool:
-    """The length of the sequence in the FASTQ record is at least min_length"""
-    return len(record.sequence) >= min_length
-
-
-def max_length_filter(max_length: int, record: dnaio.Sequence) -> bool:
-    """The length of the sequence in the FASTQ record is at most max_length"""
-    return len(record.sequence) <= max_length
-
-
-# Store filter names for use on the command line interface. Also store a
-# tuple of types so the command line arguments (strings) can be converted
-# in the appropiate types.
-FILTERS = {"mean_quality": (mean_quality_filter, (float,), ("quality",)),
-           "median_quality": (median_quality_filter, (float,), ("quality",)),
-           "min_length": (min_length_filter, (int,), ("length",)),
-           "max_length": (max_length_filter, (int,), ("length",))}
-
-
-def print_filter_help():
-    for filter_name, filter_tuple in FILTERS.items():
-        filter_func, _, arg_names = filter_tuple
-        # Reuse the docstring for the filter explanation.
-        # Convert all whitespace in docstring to space.
-        filter_usage = f"{filter_name}:<{'>,<'.join(arg_names)}>"
-        filter_explanation = " ".join(filter_func.__doc__.split())
-        print(f"{filter_usage:<30} {filter_explanation}")
-
-
-def filter_string_to_filters(filter_string: str
-                             ) -> List[Callable[[dnaio.Sequence], bool]]:
-    """Convert a filter string such as 'min_length:50|mean_quality:20 into
-    a list of filter functions that can be used by Python's builtin filter
-    function."""
-    filters: List[Callable[[dnaio.Sequence], bool]] = []
-    for single_filter_string in filter_string.split('|'):
-        filter_name, filter_argstring = single_filter_string.split(':')
+def multiple_files_to_records(input_files: List[str],
+                              ) -> Iterator[Tuple[dnaio.SequenceRecord, ...]]:
+    readers = [file_to_fastq_records(f) for f in input_files]
+    iterators = [iter(reader) for reader in readers]
+    for records in zip(*iterators):
+        if len(records) > 1 and not dnaio.records_are_mates(*records):
+            raise dnaio.FastqFormatError(
+                f"Records are out of sync, names "
+                f"{', '.join(r.name for r in records)} do not match.",
+                line=None
+            )
+        yield records
+    # Check if all iterators are exhausted.
+    for iterator in iterators:
         try:
-            filter_function, filter_argtypes, _ = FILTERS[filter_name]
-        except KeyError:
-            raise ValueError(f"Unknown filter: {filter_name}. Choose one of:"
-                             f" {' '.join(FILTERS.keys())}")
-        # Convert the strings from the command line in the appropriate types
-        filter_args = [filter_argtypes[pos](arg) for pos, arg
-                       in enumerate(filter_argstring.split(','))]
-
-        filters.append(functools.partial(filter_function, *filter_args))
-    return filters
+            _ = next(iterator)
+            raise dnaio.FastqFormatError("Input files have an unequal number"
+                                         " of FASTQ records.", line=None)
+        except StopIteration:
+            pass
 
 
-def filter_fastq(filter_string: str,
-                 input_file: str,
-                 output_file: str,
+def filter_fastq(input_files: List[str], output_files: List[str],
+                 filters: List[Callable[[Tuple[dnaio.SequenceRecord, ...]], bool]],
                  compression_level: int = DEFAULT_COMPRESSION_LEVEL):
     """
-    Filter a FASTQ input file with the filters in filter_string and write
+    Filter FASTQ input files with the filters in filters and write
     the results to the output file.
 
-    :param filter_string: A string representing one or multiple filters. For
-    more information see the documentation.
-    :param input_file: A FASTQ input filename. Compressed files are handled
+    :param filters: Functions that filter a tuple of dnaio.sequence records
+    :param input_files: FASTQ input filenames. Compressed files are handled
     automatically.
-    :param output_file: A FASTQ output filename. Compressed files are handled
+    :param output_files: FASTQ output filenames. Compressed files are handled
     automatically.
     :param compression_level: Compression level for the output files (if
     applicable)
     """
-    fastq_records = file_to_fastq_records(input_file)
-    filtered_fastq_records: Iterable[dnaio.Sequence] = fastq_records
-    for filter_func in filter_string_to_filters(filter_string):
+    if len(input_files) != len(output_files):
+        raise ValueError("Number of inputs and outputs should be equal.")
+    filtered_fastq_records = multiple_files_to_records(input_files)
+    for filter_func in filters:
         filtered_fastq_records = filter(filter_func, filtered_fastq_records)
-    fastq_records_to_file(filtered_fastq_records, output_file,
-                          compression_level=compression_level)
+    with contextlib.ExitStack() as output_stack:
+        outputs = [output_stack.enter_context(
+                   xopen.xopen(output_file, threads=0, mode="wb",
+                               compresslevel=compression_level))
+                   for output_file in output_files]
+        for records in filtered_fastq_records:
+            for record, output in zip(records, outputs):
+                output.write(record.fastq_bytes())
+
+
+def MinimumLengthFilter(threshold: int):
+    def filterfunc(record: dnaio.SequenceRecord):
+        return len(record) >= threshold
+
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        return any(map(filterfunc, records))
+
+    return combined_filter
+
+
+def MaximumLengthFilter(threshold: int):
+    def filterfunc(record: dnaio.SequenceRecord):
+        return len(record) <= threshold
+
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        return all(map(filterfunc, records))
+
+    return combined_filter
+
+
+def AverageErrorRateFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        phred_scores = "".join([record.qualities for record in records
+                                if record.qualities is not None])
+        return average_error_rate(phred_scores, phred_offset) <= threshold
+    return combined_filter
+
+
+def MedianQualityFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        phred_scores = "".join([record.qualities for record in records
+                                if record.qualities is not None])
+        return qualmedian(phred_scores, phred_offset) >= threshold
+    return combined_filter
 
 
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "filters",
-        help="Filters and arguments. For example: mean_quality:20, for "
-             "filtering all reads with an average quality below 20. Multiple "
-             "filters can be applied by separating with the | symbol. For "
-             "example: 'min_length:100|mean_quality:20'.  Make sure to use "
-             "faster filters (length) before slower ones (quality) for "
-             "optimal performance. Use --help-filters to print all the "
-             "available filters.")
+    parser.description = "Filter FASTQ files on various metrics."
     parser.add_argument("input",
-                        help="Input FASTQ file. Compression format "
-                             "automatically detected. ")
-    parser.add_argument("--help-filters", action="store_true",
-                        help="Print all the available filters.")
+                        help="Input FASTQ files. Compression format "
+                             "automatically detected. Use - for stdin.",
+                        nargs='+')
     parser.add_argument("-o", "--output",
-                        default="-",
-                        help="Output FASTQ file. Compression format "
+                        help="Output FASTQ files. Compression format "
                              "automatically determined by file extension. "
-                             "Default: stdout.")
-    parser.add_argument("-l", "--compression-level", type=int,
+                             "Flag can be used multiple times. An output must "
+                             "be given for each input. Default: stdout.",
+                        action='append')
+    parser.add_argument("-l", "--min-length", type=int,
+                        help="The minimum length for a read.")
+    parser.add_argument("-L", "--max-length", type=int,
+                        help="The maximum length for a read.")
+    parser.add_argument("-e", "--average-error-rate", type=float,
+                        help="The minimum average per base error rate.")
+    parser.add_argument("-q", "--mean-quality", type=int,
+                        help="Average quality. Same as the "
+                             "'--average-error-rate' option but specified "
+                             "with a phred score. I.e '-q 30' is equivalent "
+                             "to '-e 0.001'.")
+    parser.add_argument("-Q", "--median-quality", type=int,
+                        help="The minimum median phred score.")
+    parser.add_argument("-c", "--compression-level", type=int,
                         default=DEFAULT_COMPRESSION_LEVEL,
                         help=f"Compression level for the output files. "
                              f"Relevant when output files have a .gz "
@@ -165,13 +190,24 @@ def argument_parser() -> argparse.ArgumentParser:
 
 
 def main():
-    if "--help-filters" in sys.argv[1:]:
-        print_filter_help()
-        sys.exit(0)
     args = argument_parser().parse_args()
-    filter_fastq(filter_string=args.filters,
-                 input_file=args.input,
-                 output_file=args.output,
+    output = args.output if args.output else ["-"]
+    filters = []
+    # Filters are ordered from low cost to high cost.
+    if args.min_length:
+        filters.append(MinimumLengthFilter(args.min_length))
+    if args.max_length:
+        filters.append(MaximumLengthFilter(args.max_length))
+    if args.average_error_rate:
+        filters.append(AverageErrorRateFilter(args.average_error_rate))
+    if args.mean_quality:
+        average_error_rate = 10 ** -(args.mean_quality / 10)
+        filters.append(AverageErrorRateFilter(average_error_rate))
+    if args.median_quality:
+        filters.append(MedianQualityFilter(args.median_quality))
+    filter_fastq(filters=filters,
+                 input_files=args.input,
+                 output_files=output,
                  compression_level=args.compression_level)
 
 

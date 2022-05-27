@@ -20,21 +20,18 @@
 
 from pathlib import Path
 
-from Cython.Build import cythonize
-
 from setuptools import Extension, find_packages, setup
 
-EXT_MODULES = cythonize(
-    Extension("fastq_filter.optimized_algorithms",
-              ["src/fastq_filter/optimized_algorithms.pyx"]),
-    compiler_directives=dict(language_level="3", binding=True,
-                             cdivision=True, profile=True))
+EXT_MODULES = [
+    Extension("fastq_filter._filters",
+              ["src/fastq_filter/_filtersmodule.c"]),
+]
 
 LONG_DESCRIPTION = Path("README.rst").read_text()
 
 setup(
     name="fastq-filter",
-    version="0.1.1",
+    version="0.2.0",
     description="A fast FASTQ filter progam.",
     author="Leiden University Medical Center",
     author_email="r.h.p.vorderman@lumc.nl",
@@ -45,23 +42,22 @@ setup(
     zip_safe=False,
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    package_data={'fastq_filter': ['*.pyx', '*.pyi']},
+    package_data={'fastq_filter': ['*.c', '*.pyi', '*.h', 'py.typed']},
     ext_modules=EXT_MODULES,
     url="https://github.com/lumc/fastq-filter",
     classifiers=[
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: MIT License",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",  # dnaio version requires 3.7 or higher.
     install_requires=[
         "xopen>=1.2.1",
-        "dnaio>=0.6.0"
+        "dnaio>=0.9.0"
     ],
     entry_points={"console_scripts": [
         "fastq-filter = fastq_filter:main"]}
