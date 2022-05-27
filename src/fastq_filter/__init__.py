@@ -152,7 +152,7 @@ def median_quality_filter(threshold: float):
     def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
         phred_scores = "".join([record.qualities for record in records
                                 if record.qualities is not None])
-        return qualmedian(phred_scores) <= threshold
+        return qualmedian(phred_scores) >= threshold
     return combined_filter
 
 
@@ -164,11 +164,10 @@ def argument_parser() -> argparse.ArgumentParser:
                              "automatically detected. Use - for stdin.",
                         nargs='+')
     parser.add_argument("-o", "--output",
-                        default="-",
                         help="Output FASTQ file. Compression format "
                              "automatically determined by file extension. "
                              "Default: stdout.",
-                        nargs='+')
+                        action='append')
     parser.add_argument("-l", "--min-length", type=int,
                         help="The minimum length for a read.")
     parser.add_argument("-L", "--max-length", type=int,
@@ -193,6 +192,7 @@ def argument_parser() -> argparse.ArgumentParser:
 
 def main():
     args = argument_parser().parse_args()
+    output = args.output if args.output else ["-"]
     filters = []
     # Filters are ordered from low cost to high cost.
     if args.min_length:
@@ -205,10 +205,10 @@ def main():
         average_error_rate = 10 ** -(args.mean_quality / 10)
         filters.append(average_error_rate_filter(average_error_rate))
     if args.median_quality:
-        filters.append(qualmedian_filter(args.median_quality))
+        filters.append(median_quality_filter(args.median_quality))
     filter_fastq(filters=filters,
                  input_files=args.input,
-                 output_files=args.output,
+                 output_files=output,
                  compression_level=args.compression_level)
 
 
