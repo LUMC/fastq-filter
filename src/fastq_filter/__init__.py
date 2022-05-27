@@ -148,7 +148,7 @@ def average_error_rate_filter(threshold: float):
     return combined_filter
 
 
-def qualmedian_filter(threshold: float):
+def median_quality_filter(threshold: float):
     def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
         phred_scores = "".join([record.qualities for record in records
                                 if record.qualities is not None])
