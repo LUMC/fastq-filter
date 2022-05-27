@@ -110,6 +110,7 @@ def argument_parser() -> argparse.ArgumentParser:
 def main():
     args = argument_parser().parse_args()
     filters = []
+    # Filters are ordered from low cost to high cost.
     if args.min_length:
         filters.append(MinimumLengthFilter(args.min_length))
     if args.max_length:
