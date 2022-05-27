@@ -9,6 +9,7 @@ Changelog
 
 0.2.0-dev
 --------------------
++ Drop Python 3.6 support as Python 3.6 is end of life.
 + Filters are now applied by command flags. This is easier to understand than
   the previous method (which selected methods using strings). It is also
   easier to program and document.
