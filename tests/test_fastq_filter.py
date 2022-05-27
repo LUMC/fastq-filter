@@ -126,7 +126,5 @@ def test_main(tmp_path):
 
 
 @pytest.mark.parametrize("func", [qualmean, qualmedian])
-def test_empty_quals_error(func):
-    with pytest.raises(ValueError) as error:
-        func("")
-    assert error.match("Empty")
+def test_empty_quals_returns_nan(func):
+    assert math.isnan(func(""))

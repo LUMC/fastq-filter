@@ -73,7 +73,11 @@ average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phr
  * @return ssize_t The median, or -1 on error.
  */
 static double
-qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
+qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+{
+    if (phred_length == 0) {
+        return NAN;
+    }
     size_t histogram[128];
     uint8_t score;
     uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
