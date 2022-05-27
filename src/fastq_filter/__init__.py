@@ -27,11 +27,7 @@ import dnaio
 import xopen  # type: ignore
 
 from ._filters import (
-    AverageErrorRateFilter,
     DEFAULT_PHRED_SCORE_OFFSET,
-    MaximumLengthFilter,
-    MedianQualityFilter,
-    MinimumLengthFilter,
     average_error_rate,
     qualmean,
     qualmedian
@@ -120,7 +116,7 @@ def filter_fastq(input_files: List[str], output_files: List[str],
                 output.write(record.fastq_bytes())
 
 
-def min_length_filter(threshold: int):
+def MinimumLengthFilter(threshold: int):
     def filterfunc(record: dnaio.SequenceRecord):
         return len(record) >= threshold
 
@@ -130,7 +126,7 @@ def min_length_filter(threshold: int):
     return combined_filter
 
 
-def max_length_filter(threshold: int):
+def MaximumLengthFilter(threshold: int):
     def filterfunc(record: dnaio.SequenceRecord):
         return len(record) <= threshold
 
@@ -140,19 +136,19 @@ def max_length_filter(threshold: int):
     return combined_filter
 
 
-def average_error_rate_filter(threshold: float):
+def AverageErrorRateFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
     def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
         phred_scores = "".join([record.qualities for record in records
                                 if record.qualities is not None])
-        return average_error_rate(phred_scores) <= threshold
+        return average_error_rate(phred_scores, phred_offset) <= threshold
     return combined_filter
 
 
-def median_quality_filter(threshold: float):
+def MedianQualityFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
     def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
         phred_scores = "".join([record.qualities for record in records
                                 if record.qualities is not None])
-        return qualmedian(phred_scores) >= threshold
+        return qualmedian(phred_scores, phred_offset) >= threshold
     return combined_filter
 
 
@@ -196,16 +192,16 @@ def main():
     filters = []
     # Filters are ordered from low cost to high cost.
     if args.min_length:
-        filters.append(min_length_filter(args.min_length))
+        filters.append(MinimumLengthFilter(args.min_length))
     if args.max_length:
-        filters.append(max_length_filter(args.max_length))
+        filters.append(MaximumLengthFilter(args.max_length))
     if args.average_error_rate:
-        filters.append(average_error_rate_filter(args.average_error_rate))
+        filters.append(AverageErrorRateFilter(args.average_error_rate))
     if args.mean_quality:
         average_error_rate = 10 ** -(args.mean_quality / 10)
-        filters.append(average_error_rate_filter(average_error_rate))
+        filters.append(AverageErrorRateFilter(average_error_rate))
     if args.median_quality:
-        filters.append(median_quality_filter(args.median_quality))
+        filters.append(MedianQualityFilter(args.median_quality))
     filter_fastq(filters=filters,
                  input_files=args.input,
                  output_files=output,
