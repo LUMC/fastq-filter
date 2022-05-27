@@ -139,7 +139,7 @@ qualmean(PyObject *module, PyObject *args, PyObject *kwargs)
     PyObject *phred_scores = NULL;
     uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
     char *kwarg_names[] = {"", "phred_offset", NULL};
-    const char *format = "O!|$b:qualmean";
+    const char *format = "O!|b:qualmean";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, format, kwarg_names,
         &PyUnicode_Type,
@@ -184,7 +184,7 @@ qualmedian_py(PyObject *module, PyObject *args, PyObject *kwargs)
     PyObject *phred_scores = NULL;
     uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
     char *kwarg_names[] = {"", "phred_offset", NULL};
-    const char *format = "O!|$b:qualmedian";
+    const char *format = "O!|b:qualmedian";
     if (!PyArg_ParseTupleAndKeywords(
         args, kwargs, format, kwarg_names,
         &PyUnicode_Type,
