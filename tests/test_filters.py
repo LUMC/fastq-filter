@@ -92,7 +92,7 @@ def test_average_error_rate_filter(threshold, qualities, result):
         (8, [quallist_to_string([9, 9, 9])], True),
         (8, [quallist_to_string([1, 1, 1, 8, 9, 9, 9])], True),
         (8, [quallist_to_string([1, 1, 1, 8, 9, 9, 9]),
-              quallist_to_string([1, 1, 1, 7, 9, 9, 9])], False),
+             quallist_to_string([1, 1, 1, 7, 9, 9, 9])], False),
         (8, [quallist_to_string([1, 1, 1, 8, 9, 9, 9]),
              quallist_to_string([1, 1, 1, 8, 9, 9, 9])], True)
     ))
@@ -106,6 +106,7 @@ def test_median_quality_filter(threshold, qualities, result):
     #     assert filter.passed == 1
     # else:
     #     assert filter.passed == 0
+
 
 TOO_LOW_PHREDS = [chr(x) for x in range(33)]
 TOO_HIGH_PHREDS = [chr(127)]
@@ -143,6 +144,7 @@ def test_maximum_length_filter(threshold, lengths, result):
     #     assert filter.passed == 1
     # else:
     #     assert filter.passed == 0
+
 
 @pytest.mark.parametrize(
     ["threshold", "lengths", "result"], (
