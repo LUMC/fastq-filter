@@ -33,7 +33,7 @@ from ._filters import (
     qualmedian
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0-dev"
 
 __all__ = [
     "file_to_fastq_records",
