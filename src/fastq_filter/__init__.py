@@ -160,9 +160,10 @@ def argument_parser() -> argparse.ArgumentParser:
                              "automatically detected. Use - for stdin.",
                         nargs='+')
     parser.add_argument("-o", "--output",
-                        help="Output FASTQ file. Compression format "
+                        help="Output FASTQ files. Compression format "
                              "automatically determined by file extension. "
-                             "Default: stdout.",
+                             "Flag can be used multiple times. An output must "
+                             "be given for each input. Default: stdout.",
                         action='append')
     parser.add_argument("-l", "--min-length", type=int,
                         help="The minimum length for a read.")

@@ -53,24 +53,48 @@ Installation
 Usage
 =====
 
+Single fastq files can be filtered with::
+
+    fastq-filter -e 0.001 -o output.fastq input.fastq
+
+Multiple fastq files can be filtered with::
+
+    fastq-filter -e 0.001 -o r1_filtered.fastq.gz -o r2_filtered.fastq.gz r1.fastq.gz r2.fastq.gz
+
+Fastq-filter ensures the output is in sync. It is not limited to two inputs
+so also ``R1.fq``, ``R2.fq`` and ``R3.fq`` can be filtered together.
+
+In the following section 'pair' is used to note when 2 or more FASTQ records are
+evaluated. When multiple FASTQ files are given the filters behave as follows:
+
++ average error rate: The average of the combined phred scores is used.
++ median quality: The median of the combined phred scores is used.
++ Minimum length: at least one of the records of the pair must meet the minimum length.
++ Maximum length: None of the records in the pair must exceed the maximum length.
+
+The rationale for the length filters is that R1 and R2 both sequence the same
+molecule and the canonical length is the longest of both.
+
 .. code-block::
 
     usage: fastq-filter [-h] [-o OUTPUT] [-l MIN_LENGTH] [-L MAX_LENGTH]
                         [-e AVERAGE_ERROR_RATE] [-q MEAN_QUALITY]
                         [-Q MEDIAN_QUALITY] [-c COMPRESSION_LEVEL]
-                        input
+                        input [input ...]
 
     Filter FASTQ files on various metrics.
 
     positional arguments:
-      input                 Input FASTQ file. Compression format automatically
+      input                 Input FASTQ files. Compression format automatically
                             detected. Use - for stdin.
 
     optional arguments:
       -h, --help            show this help message and exit
       -o OUTPUT, --output OUTPUT
-                            Output FASTQ file. Compression format automatically
-                            determined by file extension. Default: stdout.
+                            Output FASTQ files. Compression format automatically
+                            determined by file extension. Flag can be used
+                            multiple times. An output must be given for each
+                            input. Default: stdout.
       -l MIN_LENGTH, --min-length MIN_LENGTH
                             The minimum length for a read.
       -L MAX_LENGTH, --max-length MAX_LENGTH
