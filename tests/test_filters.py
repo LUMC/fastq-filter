@@ -21,12 +21,17 @@ import array
 import itertools
 from typing import List
 
-import pytest
 from dnaio import SequenceRecord
 
-from fastq_filter import DEFAULT_PHRED_SCORE_OFFSET, AverageErrorRateFilter, \
-    MaximumLengthFilter, \
-    MedianQualityFilter, MinimumLengthFilter
+from fastq_filter import (
+    AverageErrorRateFilter,
+    DEFAULT_PHRED_SCORE_OFFSET,
+    MaximumLengthFilter,
+    MedianQualityFilter,
+    MinimumLengthFilter
+)
+
+import pytest
 
 
 def quallist_to_string(quallist: List[int]):
@@ -111,11 +116,46 @@ OUTSIDE_RANGE_PHREDS = TOO_LOW_PHREDS + TOO_HIGH_PHREDS
 
 @pytest.mark.parametrize(
     ["filter_class", "quals"],
-    itertools.product([AverageErrorRateFilter, MedianQualityFilter],
-    OUTSIDE_RANGE_PHREDS))
+    itertools.product(
+        [AverageErrorRateFilter, MedianQualityFilter], OUTSIDE_RANGE_PHREDS)
+)
 def test_outside_range(filter_class, quals):
     record = SequenceRecord("name", "A", quals)
     filter = filter_class(1)
     with pytest.raises(ValueError) as error:
         filter(record)
     error.match("outside of valid phred range")
+
+
+@pytest.mark.parametrize(
+    ["threshold", "length", "result"], (
+        (10, 10, True),
+        (11, 10, True),
+        (10, 11, False),
+    ))
+def test_maximum_length_filter(threshold, length, result):
+    filter = MaximumLengthFilter(threshold)
+    record = SequenceRecord("name", length * 'A', length * 'H')
+    assert filter(record) is result
+    assert filter.total == 1
+    if result:
+        assert filter.passed == 1
+    else:
+        assert filter.passed == 0
+
+
+@pytest.mark.parametrize(
+    ["threshold", "length", "result"], (
+        (10, 10, True),
+        (11, 10, False),
+        (10, 11, True),
+    ))
+def test_minimum_length_filter(threshold, length, result):
+    filter = MinimumLengthFilter(threshold)
+    record = SequenceRecord("name", length * 'A', length * 'H')
+    assert filter(record) is result
+    assert filter.total == 1
+    if result:
+        assert filter.passed == 1
+    else:
+        assert filter.passed == 0

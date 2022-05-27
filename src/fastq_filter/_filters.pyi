@@ -18,18 +18,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from _abstracts import Filter
+from typing import Union
+
+from dnaio import SequenceRecord
 
 DEFAULT_PHRED_SCORE_OFFSET: int = ...
 
-class _QualityFilter(Filter):
+class _Filter:
+    threshold: Union[int, float]
+    passed: int
+    total: int
+
+    def __init__(self): ...
+
+    def __call__(self, __record: SequenceRecord) -> bool: ...
+
+class _QualityFilter(_Filter):
     phred_offset: int
 
     def __init__(self, threshold: float,
                  phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET): ...
 
 
-class _LengthFilter(Filter):
+class _LengthFilter(_Filter):
     def __init__(self, threshold: int): ...
 
 

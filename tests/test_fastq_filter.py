@@ -97,49 +97,7 @@ def test_outside_range_phreds(func, quals):
 def test_non_ascii_phreds(func, quals):
     with pytest.raises(ValueError) as error:
         func(quals)
-    assert error.match("qualities must be an ASCII string")
-
-
-def test_min_length_filter_pass():
-    assert min_length_filter(
-        10, Sequence("", "0123456789A", "???????????")) is True
-
-
-def test_min_length_filter_fail():
-    assert min_length_filter(
-        12, Sequence("", "0123456789A", "???????????")) is False
-
-
-def test_max_length_filter_pass():
-    assert max_length_filter(
-        12, Sequence("", "0123456789A", "???????????")) is True
-
-
-def test_max_length_filter_fail():
-    assert max_length_filter(
-        10, Sequence("", "0123456789A", "???????????")) is False
-
-
-def test_mean_quality_filter_fail():
-    assert mean_quality_filter(
-        10, Sequence("", "AAA", quallist_to_string([9, 9, 9]))) is False
-
-
-def test_mean_quality_filter_pass():
-    assert mean_quality_filter(
-        8, Sequence("", "AAA", quallist_to_string([9, 9, 9]))) is True
-
-
-def test_median_quality_filter_fail():
-    assert median_quality_filter(
-        10, Sequence("", "AAAAA", quallist_to_string([9, 9, 9, 10, 10]))
-    ) is False
-
-
-def test_median_quality_filter_pass():
-    assert median_quality_filter(
-        8-0.001, Sequence(
-            "", "AAAAAAA", quallist_to_string([1, 1, 1, 8, 9, 9, 9]))) is True
+    assert error.match("phred_scores must be ASCII encoded.")
 
 
 def test_fastq_records_to_file(tmp_path):
@@ -158,42 +116,13 @@ def test_file_to_fastq_records(tmp_path):
         Sequence("TEST", "A", "A")] * 3
 
 
-def test_wrong_filter():
-    with pytest.raises(ValueError) as e:
-        fastq_filter.filter_string_to_filters("nonsense:20")
-    assert e.match("Unknown filter")
-
-
-def test_filter_fastq(tmp_path):
-    in_f = tmp_path / "in.fq"
-    out_f = tmp_path / "out.fq"
-    in_f.write_bytes(b"@TEST\nAA\n+\nAA\n@TEST\nA\n+\n-\n@TEST\nA\n+\nA\n")
-    fastq_filter.filter_fastq(
-        "mean_quality:20|min_length:2", str(in_f), str(out_f))
-    # Only one record should survive the filter.
-    assert out_f.read_bytes() == b"@TEST\nAA\n+\nAA\n"
-
-
 def test_main(tmp_path):
     in_f = tmp_path / "in.fq"
     out_f = tmp_path / "out.fq"
     in_f.write_bytes(b"@TEST\nAA\n+\nAA\n@TEST\nA\n+\n-\n@TEST\nA\n+\nA\n")
-    sys.argv = ["", "-o", str(out_f), "mean_quality:20|min_length:2",
-                str(in_f)]
+    sys.argv = ["", "-q", "20", "-l", "2", str(in_f), "-o", str(out_f)]
     fastq_filter.main()
     assert out_f.read_bytes() == b"@TEST\nAA\n+\nAA\n"
-
-
-def test_help_filters(capsys):
-    sys.argv = ["", "--help-filters"]
-    with pytest.raises(SystemExit):
-        fastq_filter.main()
-    result = capsys.readouterr()
-    # Test if docstrings get printed.
-    assert "median quality of the FASTQ record" in result.out
-    assert "The mean quality" in result.out
-    assert "at least min_length" in result.out
-    assert "at most max_length" in result.out
 
 
 @pytest.mark.parametrize("func", [qualmean, qualmedian])

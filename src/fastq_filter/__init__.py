@@ -25,11 +25,28 @@ import dnaio
 
 import xopen  # type: ignore
 
-from ._abstracts import Filter
-from ._filters import (DEFAULT_PHRED_SCORE_OFFSET,
-                       AverageErrorRateFilter, MaximumLengthFilter,
-                       MedianQualityFilter, MinimumLengthFilter, qualmean,
-                       qualmedian)
+from ._filters import (
+    AverageErrorRateFilter,
+    DEFAULT_PHRED_SCORE_OFFSET,
+    MaximumLengthFilter,
+    MedianQualityFilter,
+    MinimumLengthFilter,
+    qualmean,
+    qualmedian
+)
+
+__all__ = [
+    "file_to_fastq_records",
+    "fastq_records_to_file",
+    "filter_fastq",
+    "AverageErrorRateFilter",
+    "MaximumLengthFilter",
+    "MedianQualityFilter",
+    "MinimumLengthFilter",
+    "qualmean",
+    "qualmedian",
+    "DEFAULT_PHRED_SCORE_OFFSET"
+]
 
 DEFAULT_COMPRESSION_LEVEL = 2
 
@@ -96,7 +113,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("-L", "--max-length", type=int,
                         help="The maximum length for a read.")
     parser.add_argument("-e", "--average-error-rate", type=float,
-                        help=f"The minimum average per base error rate.")
+                        help="The minimum average per base error rate.")
     parser.add_argument("-q", "--mean-quality", type=int,
                         help="Average quality. Same as the "
                              "'--average-error-rate' option but specified "
