@@ -98,7 +98,7 @@ def argument_parser() -> argparse.ArgumentParser:
     parser.description = "Filter FASTQ files on various metrics."
     parser.add_argument("input",
                         help="Input FASTQ file. Compression format "
-                             "automatically detected. ")
+                             "automatically detected. Use - for stdin.")
     parser.add_argument("-o", "--output",
                         default="-",
                         help="Output FASTQ file. Compression format "
