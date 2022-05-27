@@ -105,7 +105,8 @@ fastq-filter has used the following optimizations to be fast:
 - Filters can be chained together to minimize IO.
 - The python filter function is used. Which is a a shorthand for python code
   that would otherwise need to be interpreted.
-- The mean and median quality algorithms are implemented in Cython.
+- The mean and median quality algorithms are implemented in C with bindings to
+  Python.
 - The mean quality algorithm uses a lookup table since there are only 93
   possible phred scores encoded in FASTQ. That saves a lot of power
   calculations to calculate the probabilities.
