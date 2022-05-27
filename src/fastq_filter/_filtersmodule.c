@@ -168,6 +168,49 @@ qualmean(PyObject *module, PyObject *args, PyObject *kwargs)
 }
 
 
+PyDoc_STRVAR(average_error_rate__doc__,
+"average_error_rate($self, phred_scores, /, phred_offset=DEFAULT_PHRED_SCORE_OFFSET)\n"
+"--\n"
+"\n"
+"Returns the average_error_rate. \n"
+"\n"
+"  phred_scores\n"
+"    ASCII string with the phred scores.\n"
+);
+
+#define AVERAGE_ERROR_RATE_METHODDEF    \
+    {"average_error_rate", (PyCFunction)(void(*)(void))average_error_rate_py, \
+     METH_VARARGS | METH_KEYWORDS, average_error_rate__doc__}
+
+static PyObject *
+average_error_rate_py(PyObject *module, PyObject *args, PyObject *kwargs)
+{
+    PyObject *phred_scores = NULL;
+    uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
+    char *kwarg_names[] = {"", "phred_offset", NULL};
+    const char *format = "O!|b:average_error_rate";
+    if (!PyArg_ParseTupleAndKeywords(
+        args, kwargs, format, kwarg_names,
+        &PyUnicode_Type,
+        &phred_scores,
+        &phred_offset)) {
+            return NULL;
+    }
+
+    if (!PyUnicode_IS_COMPACT_ASCII(phred_scores)) {
+        PyErr_SetString(PyExc_ValueError,
+                        "phred_scores must be ASCII encoded.");
+        return NULL;
+    }
+    uint8_t *phreds = PyUnicode_DATA(phred_scores);
+    size_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
+    double error_rate = average_error_rate(phreds, phred_length, phred_offset);
+    if (error_rate < 0.0L) {
+        return NULL;
+    }
+    return PyFloat_FromDouble(error_rate);
+}
+
 PyDoc_STRVAR(qualmedian__doc__,
 "qualmedian($self, phred_scores, /, phred_offset=DEFAULT_PHRED_SCORE_OFFSET)\n"
 "--\n"
@@ -212,6 +255,7 @@ qualmedian_py(PyObject *module, PyObject *args, PyObject *kwargs)
 }
 
 static PyMethodDef _filters_functions[] = {
+    AVERAGE_ERROR_RATE_METHODDEF,
     QUALMEAN_METHODDEF,
     QUALMEDIAN_METHODDEF,
     {NULL}
