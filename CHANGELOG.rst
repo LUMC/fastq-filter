@@ -7,7 +7,7 @@ Changelog
 .. NOTE: This document is user facing. Please word the changes in such a way
 .. that users understand how the changes affect the new version.
 
-0.2.0-dev
+0.2.0
 --------------------
 + Add ability for filtering paired sequences.
 + The minimum dnaio version requirement was bumped to 0.9.0.
