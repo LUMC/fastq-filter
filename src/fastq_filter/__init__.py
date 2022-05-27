@@ -111,8 +111,16 @@ def main():
     args = argument_parser().parse_args()
     filters = []
     if args.min_length:
-        min_length_filter = MinimumLengthFilter(args.min_length)
-        filters.append(min_length_filter)
+        filters.append(MinimumLengthFilter(args.min_length))
+    if args.max_length:
+        filters.append(MaximumLengthFilter(args.max_length))
+    if args.average_error_rate:
+        filters.append(AverageErrorRateFilter(args.average_error_rate))
+    if args.mean_quality:
+        average_error_rate = 10 ** -(args.mean_quality / 10)
+        filters.append(AverageErrorRateFilter(average_error_rate))
+    if args.median_quality:
+        filters.append(MedianQualityFilter(args.median_quality))
     filter_fastq(filters=filters,
                  input_file=args.input,
                  output_file=args.output,
