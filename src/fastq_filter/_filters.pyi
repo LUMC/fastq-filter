@@ -17,17 +17,38 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 from typing import Union
+
+from dnaio import SequenceRecord
 
 DEFAULT_PHRED_SCORE_OFFSET: int = ...
 
-def qualmedian(qualities: str,
-               phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-               ) -> Union[int, float]: ...
+class _Filter:
+    threshold: Union[int, float]
+    passed: int
+    total: int
 
-def qualmean(qualities: str,
-             phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET) -> float: ...
+    def __init__(self): ...
 
-def qualmean_precise(qualities: str,
-                     phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET
-                     ) -> float: ...
+    def __call__(self, __record: SequenceRecord) -> bool: ...
+
+class _QualityFilter(_Filter):
+    phred_offset: int
+
+    def __init__(self, threshold: float,
+                 phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET): ...
+
+
+class _LengthFilter(_Filter):
+    def __init__(self, threshold: int): ...
+
+
+class AverageErrorRateFilter(_QualityFilter): ...
+class MedianQualityFilter(_QualityFilter): ...
+class MinimumLengthFilter(_LengthFilter): ...
+class MaximumLengthFilter(_LengthFilter): ...
+
+def qualmean(phred_scores: str, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET): ...
+
+def qualmedian(phred_scores: str, phred_offset: int = DEFAULT_PHRED_SCORE_OFFSET): ...

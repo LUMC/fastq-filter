@@ -85,15 +85,9 @@ QUALMEAN_CODE = {
             return -10 * math.log10(average) - phred_offset  
         """
     ),
-    "Cython implementation": textwrap.dedent(
+    "C implementation": textwrap.dedent(
         """
-        from fastq_filter.optimized_algorithms import qualmean
-        """
-    ),
-    "Cython implementation precise": textwrap.dedent(
-        """
-        from fastq_filter.optimized_algorithms import \
-        qualmean_precise as qualmean
+        from fastq_filter import qualmean
         """
     ),
 }
@@ -127,9 +121,9 @@ QUALMEDIAN_CODE = {
                 phred_scores = np.frombuffer(qualities, dtype=np.int8)
                 return float(np.median(phred_scores)) - phred_offset
         """),
-    "Cython implementation": textwrap.dedent(
+    "C implementation": textwrap.dedent(
         """
-        from fastq_filter.optimized_algorithms import qualmedian
+        from fastq_filter import qualmedian
         """),
 }
 
