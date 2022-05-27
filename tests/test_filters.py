@@ -82,17 +82,22 @@ def test_average_error_rate_filter(threshold, qualities, result):
 
 @pytest.mark.parametrize(
     ["threshold", "qualities", "result"], (
-        (30, chr(63), True),
-        (30, chr(64), True),
-        (30, chr(62), False),
-        (10, quallist_to_string([9, 9, 9, 10, 10]), False),
-        (8, quallist_to_string([9, 9, 9]), True),
-        (8, quallist_to_string([1, 1, 1, 8, 9, 9, 9]), True),
+        (30, [chr(63)], True),
+        (30, [chr(64)], True),
+        (30, [chr(62)], False),
+        (10, [quallist_to_string([9, 9, 9, 10, 10])], False),
+        (8, [quallist_to_string([9, 9, 9])], True),
+        (8, [quallist_to_string([1, 1, 1, 8, 9, 9, 9])], True),
+        (8, [quallist_to_string([1, 1, 1, 8, 9, 9, 9]),
+              quallist_to_string([1, 1, 1, 7, 9, 9, 9])], False),
+        (8, [quallist_to_string([1, 1, 1, 8, 9, 9, 9]),
+             quallist_to_string([1, 1, 1, 8, 9, 9, 9])], True)
     ))
 def test_median_quality_filter(threshold, qualities, result):
     filter = MedianQualityFilter(threshold)
-    record = SequenceRecord("name", len(qualities) * 'A', qualities)
-    assert filter((record,)) is result
+    records = [SequenceRecord("name", len(qual) * 'A', qual)
+               for qual in qualities]
+    assert filter(tuple(records)) is result
     # assert filter.total == 1
     # if result:
     #     assert filter.passed == 1
