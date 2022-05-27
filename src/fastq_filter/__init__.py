@@ -18,19 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import argparse
+import contextlib
 import functools
-from typing import Callable, Generator, Iterable, List
+from typing import Callable, Iterable, Iterator, List, Tuple
 
 import dnaio
 
 import xopen  # type: ignore
 
 from ._filters import (
-    AverageErrorRateFilter,
     DEFAULT_PHRED_SCORE_OFFSET,
-    MaximumLengthFilter,
-    MedianQualityFilter,
-    MinimumLengthFilter,
+    average_error_rate,
     qualmean,
     qualmedian
 )
@@ -51,8 +49,7 @@ __all__ = [
 DEFAULT_COMPRESSION_LEVEL = 2
 
 
-def file_to_fastq_records(filepath: str) -> Generator[dnaio.Sequence,
-                                                      None, None]:
+def file_to_fastq_records(filepath: str) -> Iterator[dnaio.Sequence]:
     """Parse a FASTQ file into a generator of Sequence objects"""
     opener = functools.partial(xopen.xopen, threads=0)
     with dnaio.open(filepath, opener=opener) as record_h:  # type: ignore
@@ -67,42 +64,107 @@ def fastq_records_to_file(records: Iterable[dnaio.Sequence], filepath: str,
             output_h.write(record.fastq_bytes())
 
 
-def filter_fastq(input_file: str,
-                 output_file: str,
-                 filters: List[Callable[[dnaio.SequenceRecord], bool]],
+def multiple_files_to_records(input_files: List[str],
+                              ) -> Iterator[Tuple[dnaio.SequenceRecord, ...]]:
+    readers = [file_to_fastq_records(f) for f in input_files]
+    iterators = [iter(reader) for reader in readers]
+    for records in zip(*iterators):
+        if len(records) > 1 and not dnaio.records_are_mates(*records):
+            raise dnaio.FastqFormatError(
+                f"Records are out of sync, names "
+                f"{', '.join(r.name for r in records)} do not match.",
+                line=None
+            )
+        yield records
+    # Check if all iterators are exhausted.
+    for iterator in iterators:
+        try:
+            _ = next(iterator)
+            raise dnaio.FastqFormatError("Input files have an unequal number"
+                                         " of FASTQ records.", line=None)
+        except StopIteration:
+            pass
+
+
+def filter_fastq(input_files: List[str], output_files: List[str],
+                 filters: List[Callable[[Tuple[dnaio.SequenceRecord, ...]], bool]],
                  compression_level: int = DEFAULT_COMPRESSION_LEVEL):
     """
-    Filter a FASTQ input file with the filters in filter_string and write
+    Filter FASTQ input files with the filters in filters and write
     the results to the output file.
 
-    :param filter_string: A string representing one or multiple filters. For
-    more information see the documentation.
-    :param input_file: A FASTQ input filename. Compressed files are handled
+    :param filters: Functions that filter a tuple of dnaio.sequence records
+    :param input_files: FASTQ input filenames. Compressed files are handled
     automatically.
-    :param output_file: A FASTQ output filename. Compressed files are handled
+    :param output_files: FASTQ output filenames. Compressed files are handled
     automatically.
     :param compression_level: Compression level for the output files (if
     applicable)
     """
-    fastq_records = file_to_fastq_records(input_file)
-    filtered_fastq_records: Iterable[dnaio.Sequence] = fastq_records
+    if len(input_files) != len(output_files):
+        raise ValueError("Number of inputs and outputs should be equal.")
+    filtered_fastq_records = multiple_files_to_records(input_files)
     for filter_func in filters:
         filtered_fastq_records = filter(filter_func, filtered_fastq_records)
-    fastq_records_to_file(filtered_fastq_records, output_file,
-                          compression_level=compression_level)
+    with contextlib.ExitStack() as output_stack:
+        outputs = [output_stack.enter_context(
+                   xopen.xopen(output_file, threads=0, mode="wb",
+                               compresslevel=compression_level))
+                   for output_file in output_files]
+        for records in filtered_fastq_records:
+            for record, output in zip(records, outputs):
+                output.write(record.fastq_bytes())
+
+
+def MinimumLengthFilter(threshold: int):
+    def filterfunc(record: dnaio.SequenceRecord):
+        return len(record) >= threshold
+
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        return any(map(filterfunc, records))
+
+    return combined_filter
+
+
+def MaximumLengthFilter(threshold: int):
+    def filterfunc(record: dnaio.SequenceRecord):
+        return len(record) <= threshold
+
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        return all(map(filterfunc, records))
+
+    return combined_filter
+
+
+def AverageErrorRateFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        phred_scores = "".join([record.qualities for record in records
+                                if record.qualities is not None])
+        return average_error_rate(phred_scores, phred_offset) <= threshold
+    return combined_filter
+
+
+def MedianQualityFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
+    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
+        phred_scores = "".join([record.qualities for record in records
+                                if record.qualities is not None])
+        return qualmedian(phred_scores, phred_offset) >= threshold
+    return combined_filter
 
 
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.description = "Filter FASTQ files on various metrics."
     parser.add_argument("input",
-                        help="Input FASTQ file. Compression format "
-                             "automatically detected. Use - for stdin.")
+                        help="Input FASTQ files. Compression format "
+                             "automatically detected. Use - for stdin.",
+                        nargs='+')
     parser.add_argument("-o", "--output",
-                        default="-",
-                        help="Output FASTQ file. Compression format "
+                        help="Output FASTQ files. Compression format "
                              "automatically determined by file extension. "
-                             "Default: stdout.")
+                             "Flag can be used multiple times. An output must "
+                             "be given for each input. Default: stdout.",
+                        action='append')
     parser.add_argument("-l", "--min-length", type=int,
                         help="The minimum length for a read.")
     parser.add_argument("-L", "--max-length", type=int,
@@ -127,6 +189,7 @@ def argument_parser() -> argparse.ArgumentParser:
 
 def main():
     args = argument_parser().parse_args()
+    output = args.output if args.output else ["-"]
     filters = []
     # Filters are ordered from low cost to high cost.
     if args.min_length:
@@ -141,8 +204,8 @@ def main():
     if args.median_quality:
         filters.append(MedianQualityFilter(args.median_quality))
     filter_fastq(filters=filters,
-                 input_file=args.input,
-                 output_file=args.output,
+                 input_files=args.input,
+                 output_files=output,
                  compression_level=args.compression_level)
 
 
