@@ -516,14 +516,15 @@ MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
         Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
         // If any of the records passes the minimum length we pass.
         // R1 and R2 sequence the same molecule so this is valid.
-        if (length >= self->threshold_i) {
-            self->pass += 1;
-            self->total += 1;
-            Py_RETURN_TRUE;
-        }
+        // Do not return early so all records are checked to ensure no record
+        // is faulty.
+        pass |= (length >= self->threshold_i);
     }
     self->total += 1;
-    Py_RETURN_FALSE;
+    if (pass) {
+        self->pass += 1;
+    };
+    return PyBool_FromLong(pass);
 }
 
 static PyObject *
