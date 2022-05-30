@@ -364,7 +364,7 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
-GenericFilter_ParseArgsToRecord(PyObject *args, PyObject *kwargs) 
+GenericFilter_ParseArgsToRecordTuple(PyObject *args, PyObject *kwargs) 
 {
     if (kwargs != NULL) {
         PyErr_Format(PyExc_TypeError, 
@@ -379,11 +379,24 @@ GenericFilter_ParseArgsToRecord(PyObject *args, PyObject *kwargs)
         return NULL;
     }
     PyObject *arg = PyTuple_GET_ITEM(args, 0);
-    if (!(Py_TYPE(arg) == SequenceRecord)) {
+    if (!PyTuple_CheckExact(arg)) {
         PyErr_Format(PyExc_TypeError, 
-                     "record must be of type dnaio.SequenceRecord, got %s", 
+                     "filter argument must be a tuple, got %s",
                      Py_TYPE(arg)->tp_name);
         return NULL;
+    }
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(arg);
+    PyObject *record;
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(arg, i);
+        if (!(Py_TYPE(record) == SequenceRecord)) {
+            PyErr_Format(
+                PyExc_TypeError, 
+                "All records must be of type dnaio.SequenceRecord, "
+                "got %s at index %zd", 
+                Py_TYPE(arg)->tp_name, i);
+        return NULL;
+        }
     }
     return arg;
 }
@@ -391,28 +404,42 @@ GenericFilter_ParseArgsToRecord(PyObject *args, PyObject *kwargs)
 static PyObject *
 AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
-    if (record == NULL) {
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    if (record_tuple == NULL) {
         return NULL;
     }
-    PyObject *phred_scores = SequenceRecord_GetQualities(record);
-    if (phred_scores == NULL) {
-        return NULL;
+    PyObject *record;
+    PyObject *phred_scores;
+    uint8_t *phreds;
+    Py_ssize_t phred_length;
+    uint8_t phred_offset = self->phred_offset;
+    double total_error_sum = 0.0;
+    size_t length_sum = 0;
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(record_tuple, i);
+        phred_scores = SequenceRecord_GetQualities(record);
+        if (phred_scores == NULL) {
+            return NULL;
+        }
+        if (phred_scores == Py_None) {
+            PyErr_Format(
+                PyExc_ValueError,
+                "SequenceRecord object with name %R does not have quality scores "
+                "(FASTA record)", PyObject_GetAttrString(record, "name")
+            );
+            return NULL;
+        }
+        phreds = PyUnicode_DATA(phred_scores);
+        phred_length = PyUnicode_GET_LENGTH(phred_scores);
+        double error_sum = sum_error_rate(phreds, phred_length, phred_offset);
+        if (error_sum < 0) {
+            return NULL; 
+        }
+        total_error_sum += error_sum;
+        length_sum += phred_length;
     }
-    if (phred_scores == Py_None) {
-        PyErr_Format(
-            PyExc_ValueError,
-            "SequenceRecord object with name %R does not have quality scores "
-            "(FASTA record)", PyObject_GetAttrString(record, "name")
-        );
-        return NULL;
-    }
-    uint8_t *phreds = PyUnicode_DATA(phred_scores);
-    Py_ssize_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
-    double error_rate = average_error_rate(phreds, phred_length, self->phred_offset);
-    if (error_rate < 0) {
-        return NULL; 
-    }
+    double error_rate = total_error_sum / (double)length_sum;
     self->total += 1;
     int pass = error_rate <= self->threshold_d;
     if (pass) {
