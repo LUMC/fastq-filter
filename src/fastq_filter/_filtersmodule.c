@@ -451,26 +451,41 @@ AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwar
 static PyObject *
 MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
-    if (record == NULL) {
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    if (record_tuple == NULL) {
         return NULL;
     }
-    PyObject *phred_scores = SequenceRecord_GetQualities(record);
-    if (phred_scores == NULL) {
-        return NULL;
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
+    uint8_t phred_offset = self->phred_offset;
+    size_t total_phred_length = 0;
+    int ret;
+    PyObject *record;
+    size_t histogram[128];
+    memset(histogram, 0, sizeof(size_t) * 128);
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(record_tuple, i);
+        PyObject *phred_scores = SequenceRecord_GetQualities(record);
+        if (phred_scores == NULL) {
+            return NULL;
+        }
+        if (phred_scores == Py_None) {
+            PyErr_Format(
+                PyExc_ValueError,
+                "SequenceRecord object with name %R does not have quality scores "
+                "(FASTA record)", PyObject_GetAttrString(record, "name")
+            );
+            return NULL;
+        }
+        uint8_t *phreds = PyUnicode_DATA(phred_scores);
+        Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
+        ret = make_histogram(histogram, phreds, phred_length, phred_offset);
+        if (ret != 0) {
+            return NULL;
+        }
+        total_phred_length += phred_length;
     }
-    if (phred_scores == Py_None) {
-        PyErr_Format(
-            PyExc_ValueError,
-            "SequenceRecord object with name %R does not have quality scores "
-            "(FASTA record)", PyObject_GetAttrString(record, "name")
-        );
-        return NULL;
-    }
-    uint8_t *phreds = PyUnicode_DATA(phred_scores);
-    Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
-    double median = qualmedian(phreds, phred_length, self->phred_offset);
-    if (median < 0) {
+    double median = median_from_histogram(histogram, total_phred_length, phred_offset);
+    if (median < 0.0) {
         return NULL;
     }
     self->total += 1;
