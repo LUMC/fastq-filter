@@ -36,17 +36,8 @@ static PyObject *QualitiesAttrString = NULL;
 #define SequenceRecord_GetQualities(o) PyObject_GetAttr(o, QualitiesAttrString)
 
 
-/**
- * @brief Returns the average error rate based on an array of phred scores. 
- * 
- * @param phred_scores The array of phred scores.
- * @param phred_length The length of the phred scores array.
- * @param phred_offset The offset for the phred scores
- * @return double The average error rate or -1.0L on error.
- */
-static double 
-average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
-{
+static inline double 
+sum_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
     double total_error_rate = 0.0;
     uint8_t score;
     uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
@@ -60,6 +51,24 @@ average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phr
             return -1.0L;
         }
         total_error_rate += SCORE_TO_ERROR_RATE[score];
+    }
+    return total_error_rate;
+}
+
+/**
+ * @brief Returns the average error rate based on an array of phred scores. 
+ * 
+ * @param phred_scores The array of phred scores.
+ * @param phred_length The length of the phred scores array.
+ * @param phred_offset The offset for the phred scores
+ * @return double The average error rate or -1.0L on error.
+ */
+static double 
+average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+{
+    double total_error_rate = sum_error_rate(phred_scores, phred_length, phred_offset);
+    if (total_error_rate < 0.0) {
+        return -1.0L;
     }
     return total_error_rate / (double)phred_length;
 }
