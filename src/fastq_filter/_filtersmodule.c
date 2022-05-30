@@ -73,24 +73,12 @@ average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phr
     return total_error_rate / (double)phred_length;
 }
 
-/**
- * @brief Returns a rounded up median phred_score. (i.e. 26.5 -> 27)
- * 
- * @param phred_scores Array of phred scores to calculate the median off.
- * @param phred_length The length of the phred_scores
- * @param phred_offset The phred offset
- * @return ssize_t The median, or -1 on error.
- */
-static double
-qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+static inline int 
+make_histogram(size_t *histogram, const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) 
 {
-    if (phred_length == 0) {
-        return NAN;
-    }
-    size_t histogram[128];
     uint8_t score;
     uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
-    memset(histogram, 0, 128 * sizeof(size_t));
+
     for (size_t i=0; i < phred_length; i+= 1) {
         score = phred_scores[i] - phred_offset;
         if (score > max_score) {
@@ -98,10 +86,18 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                 PyExc_ValueError,
                 "Character %c outside of valid phred range ('%c' to '%c')",
                 phred_scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
-            return -1.0L;
+            return -1;
         }
         histogram[score] += 1;
     }
+    return 0;
+}
+
+static inline double 
+median_from_histogram(size_t *histogram, size_t phred_length, uint8_t phred_offset) 
+{
+    uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
+
     int odd_number_of_items = phred_length % 2;
     size_t half_of_items = phred_length / 2;  // First middle value of 50 = 25
     if (odd_number_of_items) {
@@ -130,6 +126,29 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                     "Unable to find median. This is an error in the code. "
                     "Please contact the developers.");
     return -1.0L;
+}
+
+/**
+ * @brief Returns a rounded up median phred_score. (i.e. 26.5 -> 27)
+ * 
+ * @param phred_scores Array of phred scores to calculate the median off.
+ * @param phred_length The length of the phred_scores
+ * @param phred_offset The phred offset
+ * @return double The median, or -1.0 on error.
+ */
+static double
+qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+{
+    if (phred_length == 0) {
+        return NAN;
+    }
+    size_t histogram[128];
+    memset(histogram, 0, 128 * sizeof(size_t));
+    int ret = make_histogram(histogram, phred_scores, phred_length, phred_offset);
+    if (ret != 0) {
+        return -1.0L;
+    }
+    return median_from_histogram(histogram, phred_length, phred_offset);
 }
 
 PyDoc_STRVAR(qualmean__doc__,
