@@ -553,6 +553,42 @@ MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
     Py_RETURN_TRUE;
 }
 
+static PyObject *
+AverageErrorRateFilter_get_name(PyObject *self, void *closure)
+{
+    return PyUnicode_FromString("average error rate");
+}
+
+static PyObject *
+MedianQualityFilter_get_name(PyObject *self, void *closure)
+{
+    return PyUnicode_FromString("median quality");
+}
+
+static PyObject *
+MinimumLengthFilter_get_name(PyObject *self, void *closure)
+{
+    return PyUnicode_FromString("minimum length");
+}
+
+static PyObject *
+MaximumLengthFilter_get_name(PyObject *self, void *closure)
+{
+    return PyUnicode_FromString("maximum length");
+}
+
+static PyGetSetDef AverageErrorRateFilter_properties[] = {
+    {"name", AverageErrorRateFilter_get_name, NULL, NULL, NULL}, {NULL}};
+
+static PyGetSetDef MedianQualityFilter_properties[] = {
+    {"name", MedianQualityFilter_get_name, NULL, NULL, NULL}, {NULL}};
+
+static PyGetSetDef MinimumLengthFilter_properties[] = {
+    {"name", MinimumLengthFilter_get_name, NULL, NULL, NULL}, {NULL}};
+
+static PyGetSetDef MaximumLengthFilter_properties[] = {
+    {"name", MaximumLengthFilter_get_name, NULL, NULL, NULL}, {NULL}};
+
 static PyTypeObject AverageErrorRateFilter_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "_filter.AverageErrorRateFilter",
@@ -560,6 +596,7 @@ static PyTypeObject AverageErrorRateFilter_Type = {
     .tp_new = GenericQualityFilter__new__,
     .tp_call = (ternaryfunc)AverageErrorRateFilter__call__,
     .tp_members = GenericQualityFilterMembers,
+    .tp_getset = AverageErrorRateFilter_properties,
 };
 
 static PyTypeObject MedianQualityFilter_Type = {
@@ -569,6 +606,7 @@ static PyTypeObject MedianQualityFilter_Type = {
     .tp_new = GenericQualityFilter__new__,
     .tp_call = (ternaryfunc)MedianQualityFilter__call__,
     .tp_members = GenericQualityFilterMembers,
+    .tp_getset = MedianQualityFilter_properties,
 };
 
 static PyTypeObject MinimumLengthFilter_Type = {
@@ -578,6 +616,7 @@ static PyTypeObject MinimumLengthFilter_Type = {
     .tp_new = GenericLengthFilter__new__,
     .tp_call = (ternaryfunc)MinLengthFilter__call__,
     .tp_members = GenericLengthFilterMembers,
+    .tp_getset = MinimumLengthFilter_properties
 };
 
 static PyTypeObject MaximumLengthFilter_Type = {
@@ -587,6 +626,7 @@ static PyTypeObject MaximumLengthFilter_Type = {
     .tp_new = GenericLengthFilter__new__,
     .tp_call = (ternaryfunc)MaxLengthFilter__call__,
     .tp_members = GenericLengthFilterMembers,
+    .tp_getset = MaximumLengthFilter_properties,
 };
 
 static struct PyModuleDef _filters_module = {
