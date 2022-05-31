@@ -504,7 +504,6 @@ MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
     if (record_tuple == NULL) {
         return NULL;
     }
-    int pass = 0;
     PyObject *record;
     Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
@@ -533,7 +532,6 @@ MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
     if (record_tuple == NULL) {
         return NULL;
     }
-    int pass = 0;
     PyObject *record;
     Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
