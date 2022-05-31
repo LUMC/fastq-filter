@@ -529,21 +529,30 @@ MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
-    if (record == NULL) {
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    if (record_tuple == NULL) {
         return NULL;
     }
-    PyObject *sequence = SequenceRecord_GetSequence(record);
-    if (sequence == NULL) {
-        return NULL;
-    }    
-    Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
-    int pass = length <= self->threshold_i;
+    int pass = 0;
+    PyObject *record;
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(record_tuple, i);
+        PyObject *sequence = SequenceRecord_GetSequence(record);
+        if (sequence == NULL) {
+            return NULL;
+        }
+        Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
+        // If any of the records exceeds the maximum length we fail.
+        // R1 and R2 sequence the same molecule so this is valid.
+        if (length > self->threshold_i) {
+            self->total += 1;
+            Py_RETURN_FALSE;
+        }
+    }
+    self->pass += 1;
     self->total += 1;
-    if (pass) {
-        self->pass += 1;
-    }
-    return PyBool_FromLong(pass);   
+    Py_RETURN_TRUE;
 }
 
 static PyTypeObject AverageErrorRateFilter_Type = {
