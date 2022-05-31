@@ -27,8 +27,8 @@ import dnaio
 import xopen  # type: ignore
 
 from ._filters import (
-    DEFAULT_PHRED_SCORE_OFFSET,
     AverageErrorRateFilter,
+    DEFAULT_PHRED_SCORE_OFFSET,
     MaximumLengthFilter,
     MedianQualityFilter,
     MinimumLengthFilter,
@@ -47,6 +47,7 @@ __all__ = [
     "MaximumLengthFilter",
     "MedianQualityFilter",
     "MinimumLengthFilter",
+    "average_error_rate",
     "qualmean",
     "qualmedian",
     "DEFAULT_PHRED_SCORE_OFFSET"
@@ -169,8 +170,8 @@ def main():
     if args.average_error_rate:
         filters.append(AverageErrorRateFilter(args.average_error_rate))
     if args.mean_quality:
-        average_error_rate = 10 ** -(args.mean_quality / 10)
-        filters.append(AverageErrorRateFilter(average_error_rate))
+        error_rate = 10 ** -(args.mean_quality / 10)
+        filters.append(AverageErrorRateFilter(error_rate))
     if args.median_quality:
         filters.append(MedianQualityFilter(args.median_quality))
     filter_fastq(filters=filters,
