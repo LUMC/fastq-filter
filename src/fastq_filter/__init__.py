@@ -223,6 +223,5 @@ def main():
                   f"({filter.passed * 100 / filter.total :.2f}%)")
 
 
-
 if __name__ == "__main__":  # pragma: no cover
     main()
