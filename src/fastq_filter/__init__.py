@@ -170,8 +170,10 @@ def argument_parser() -> argparse.ArgumentParser:
                              f"Relevant when output files have a .gz "
                              f"extension. Default: {DEFAULT_COMPRESSION_LEVEL}"
                         )
-    parser.add_argument("--verbose", action="count", default=0)
-    parser.add_argument("--quiet", action="count", default=0)
+    parser.add_argument("--verbose", action="count", default=0,
+                        help="Report stats on individual filters.")
+    parser.add_argument("--quiet", action="count", default=0,
+                        help="Turn of logging output.")
     return parser
 
 

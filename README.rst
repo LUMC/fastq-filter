@@ -79,7 +79,8 @@ molecule and the canonical length is the longest of both.
 
     usage: fastq-filter [-h] [-o OUTPUT] [-l MIN_LENGTH] [-L MAX_LENGTH]
                         [-e AVERAGE_ERROR_RATE] [-q MEAN_QUALITY]
-                        [-Q MEDIAN_QUALITY] [-c COMPRESSION_LEVEL]
+                        [-Q MEDIAN_QUALITY] [-c COMPRESSION_LEVEL] [--verbose]
+                        [--quiet]
                         input [input ...]
 
     Filter FASTQ files on various metrics.
@@ -110,7 +111,8 @@ molecule and the canonical length is the longest of both.
       -c COMPRESSION_LEVEL, --compression-level COMPRESSION_LEVEL
                             Compression level for the output files. Relevant when
                             output files have a .gz extension. Default: 2
-
+      --verbose             Report stats on individual filters.
+      --quiet               Turn of logging output.
 
 Optimizations
 =============
