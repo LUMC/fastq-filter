@@ -20,6 +20,7 @@
 import argparse
 import contextlib
 import functools
+import logging
 from typing import Callable, Iterable, Iterator, List, Tuple
 
 import dnaio
@@ -123,6 +124,20 @@ def filter_fastq(input_files: List[str], output_files: List[str],
                 output.write(record.fastq_bytes())
 
 
+def initiate_logger(verbose: int = 0, quiet: int = 0):
+    log_level = logging.INFO - 10 * (verbose - quiet)
+    logger = logging.getLogger("fastq-filter")
+    logger.setLevel(log_level)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    formatter = logging.Formatter(
+        "{asctime}:{levelname}:{name}: {message}",
+        datefmt="%m/%d/%Y %I:%M:%S",
+        style="{")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.description = "Filter FASTQ files on various metrics."
@@ -155,6 +170,8 @@ def argument_parser() -> argparse.ArgumentParser:
                              f"Relevant when output files have a .gz "
                              f"extension. Default: {DEFAULT_COMPRESSION_LEVEL}"
                         )
+    parser.add_argument("--verbose", action="count", default=0)
+    parser.add_argument("--quiet", action="count", default=0)
     return parser
 
 
@@ -162,6 +179,12 @@ def main():
     args = argument_parser().parse_args()
     output = args.output if args.output else ["-"]
     filters = []
+
+    initiate_logger(args.verbose, args.quiet)
+    log = logging.getLogger("fastq-filter")
+    log.info(f"input files: {', '.join(args.input)}")
+    log.info(f"output files: {', '.join(args.output)}")
+
     # Filters are ordered from low cost to high cost.
     if args.min_length:
         filters.append(MinimumLengthFilter(args.min_length))
