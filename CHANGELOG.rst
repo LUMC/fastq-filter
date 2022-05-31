@@ -7,6 +7,12 @@ Changelog
 .. NOTE: This document is user facing. Please word the changes in such a way
 .. that users understand how the changes affect the new version.
 
+0.3.0-dev
+--------------------
++ Added logging with basic stats. When ``--verbose`` is set, the counts for
+  individual filters are reported. With ``--quiet`` logging can be turned off.
++ Mildly improved performance by porting the filters to C.
+
 0.2.0
 --------------------
 + Add ability for filtering paired sequences.
