@@ -36,17 +36,8 @@ static PyObject *QualitiesAttrString = NULL;
 #define SequenceRecord_GetQualities(o) PyObject_GetAttr(o, QualitiesAttrString)
 
 
-/**
- * @brief Returns the average error rate based on an array of phred scores. 
- * 
- * @param phred_scores The array of phred scores.
- * @param phred_length The length of the phred scores array.
- * @param phred_offset The offset for the phred scores
- * @return double The average error rate or -1.0L on error.
- */
-static double 
-average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
-{
+static inline double 
+sum_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
     double total_error_rate = 0.0;
     uint8_t score;
     uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
@@ -61,27 +52,33 @@ average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phr
         }
         total_error_rate += SCORE_TO_ERROR_RATE[score];
     }
-    return total_error_rate / (double)phred_length;
+    return total_error_rate;
 }
 
 /**
- * @brief Returns a rounded up median phred_score. (i.e. 26.5 -> 27)
+ * @brief Returns the average error rate based on an array of phred scores. 
  * 
- * @param phred_scores Array of phred scores to calculate the median off.
- * @param phred_length The length of the phred_scores
- * @param phred_offset The phred offset
- * @return ssize_t The median, or -1 on error.
+ * @param phred_scores The array of phred scores.
+ * @param phred_length The length of the phred scores array.
+ * @param phred_offset The offset for the phred scores
+ * @return double The average error rate or -1.0L on error.
  */
-static double
-qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+static double 
+average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
 {
-    if (phred_length == 0) {
-        return NAN;
+    double total_error_rate = sum_error_rate(phred_scores, phred_length, phred_offset);
+    if (total_error_rate < 0.0) {
+        return -1.0L;
     }
-    size_t histogram[128];
+    return total_error_rate / (double)phred_length;
+}
+
+static inline int 
+make_histogram(size_t *histogram, const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) 
+{
     uint8_t score;
     uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
-    memset(histogram, 0, 128 * sizeof(size_t));
+
     for (size_t i=0; i < phred_length; i+= 1) {
         score = phred_scores[i] - phred_offset;
         if (score > max_score) {
@@ -89,10 +86,18 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                 PyExc_ValueError,
                 "Character %c outside of valid phred range ('%c' to '%c')",
                 phred_scores[i], phred_offset, MAXIMUM_PHRED_SCORE);
-            return -1.0L;
+            return -1;
         }
         histogram[score] += 1;
     }
+    return 0;
+}
+
+static inline double 
+median_from_histogram(size_t *histogram, size_t phred_length, uint8_t phred_offset) 
+{
+    uint8_t max_score = MAXIMUM_PHRED_SCORE - phred_offset;
+
     int odd_number_of_items = phred_length % 2;
     size_t half_of_items = phred_length / 2;  // First middle value of 50 = 25
     if (odd_number_of_items) {
@@ -121,6 +126,29 @@ qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offse
                     "Unable to find median. This is an error in the code. "
                     "Please contact the developers.");
     return -1.0L;
+}
+
+/**
+ * @brief Returns a rounded up median phred_score. (i.e. 26.5 -> 27)
+ * 
+ * @param phred_scores Array of phred scores to calculate the median off.
+ * @param phred_length The length of the phred_scores
+ * @param phred_offset The phred offset
+ * @return double The median, or -1.0 on error.
+ */
+static double
+qualmedian(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
+{
+    if (phred_length == 0) {
+        return NAN;
+    }
+    size_t histogram[128];
+    memset(histogram, 0, 128 * sizeof(size_t));
+    int ret = make_histogram(histogram, phred_scores, phred_length, phred_offset);
+    if (ret != 0) {
+        return -1.0L;
+    }
+    return median_from_histogram(histogram, phred_length, phred_offset);
 }
 
 PyDoc_STRVAR(qualmean__doc__,
@@ -336,7 +364,7 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
-GenericFilter_ParseArgsToRecord(PyObject *args, PyObject *kwargs) 
+GenericFilter_ParseArgsToRecordTuple(PyObject *args, PyObject *kwargs) 
 {
     if (kwargs != NULL) {
         PyErr_Format(PyExc_TypeError, 
@@ -351,11 +379,24 @@ GenericFilter_ParseArgsToRecord(PyObject *args, PyObject *kwargs)
         return NULL;
     }
     PyObject *arg = PyTuple_GET_ITEM(args, 0);
-    if (!(Py_TYPE(arg) == SequenceRecord)) {
+    if (!PyTuple_CheckExact(arg)) {
         PyErr_Format(PyExc_TypeError, 
-                     "record must be of type dnaio.SequenceRecord, got %s", 
+                     "filter argument must be a tuple, got %s",
                      Py_TYPE(arg)->tp_name);
         return NULL;
+    }
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(arg);
+    PyObject *record;
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(arg, i);
+        if (!(Py_TYPE(record) == SequenceRecord)) {
+            PyErr_Format(
+                PyExc_TypeError, 
+                "All records must be of type dnaio.SequenceRecord, "
+                "got %s at index %zd", 
+                Py_TYPE(arg)->tp_name, i);
+        return NULL;
+        }
     }
     return arg;
 }
@@ -363,28 +404,42 @@ GenericFilter_ParseArgsToRecord(PyObject *args, PyObject *kwargs)
 static PyObject *
 AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
-    if (record == NULL) {
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    if (record_tuple == NULL) {
         return NULL;
     }
-    PyObject *phred_scores = SequenceRecord_GetQualities(record);
-    if (phred_scores == NULL) {
-        return NULL;
+    PyObject *record;
+    PyObject *phred_scores;
+    uint8_t *phreds;
+    Py_ssize_t phred_length;
+    uint8_t phred_offset = self->phred_offset;
+    double total_error_sum = 0.0;
+    size_t length_sum = 0;
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(record_tuple, i);
+        phred_scores = SequenceRecord_GetQualities(record);
+        if (phred_scores == NULL) {
+            return NULL;
+        }
+        if (phred_scores == Py_None) {
+            PyErr_Format(
+                PyExc_ValueError,
+                "SequenceRecord object with name %R does not have quality scores "
+                "(FASTA record)", PyObject_GetAttrString(record, "name")
+            );
+            return NULL;
+        }
+        phreds = PyUnicode_DATA(phred_scores);
+        phred_length = PyUnicode_GET_LENGTH(phred_scores);
+        double error_sum = sum_error_rate(phreds, phred_length, phred_offset);
+        if (error_sum < 0) {
+            return NULL; 
+        }
+        total_error_sum += error_sum;
+        length_sum += phred_length;
     }
-    if (phred_scores == Py_None) {
-        PyErr_Format(
-            PyExc_ValueError,
-            "SequenceRecord object with name %R does not have quality scores "
-            "(FASTA record)", PyObject_GetAttrString(record, "name")
-        );
-        return NULL;
-    }
-    uint8_t *phreds = PyUnicode_DATA(phred_scores);
-    Py_ssize_t phred_length = PyUnicode_GET_LENGTH(phred_scores);
-    double error_rate = average_error_rate(phreds, phred_length, self->phred_offset);
-    if (error_rate < 0) {
-        return NULL; 
-    }
+    double error_rate = total_error_sum / (double)length_sum;
     self->total += 1;
     int pass = error_rate <= self->threshold_d;
     if (pass) {
@@ -396,26 +451,41 @@ AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwar
 static PyObject *
 MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
-    if (record == NULL) {
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    if (record_tuple == NULL) {
         return NULL;
     }
-    PyObject *phred_scores = SequenceRecord_GetQualities(record);
-    if (phred_scores == NULL) {
-        return NULL;
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
+    uint8_t phred_offset = self->phred_offset;
+    size_t total_phred_length = 0;
+    int ret;
+    PyObject *record;
+    size_t histogram[128];
+    memset(histogram, 0, sizeof(size_t) * 128);
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(record_tuple, i);
+        PyObject *phred_scores = SequenceRecord_GetQualities(record);
+        if (phred_scores == NULL) {
+            return NULL;
+        }
+        if (phred_scores == Py_None) {
+            PyErr_Format(
+                PyExc_ValueError,
+                "SequenceRecord object with name %R does not have quality scores "
+                "(FASTA record)", PyObject_GetAttrString(record, "name")
+            );
+            return NULL;
+        }
+        uint8_t *phreds = PyUnicode_DATA(phred_scores);
+        Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
+        ret = make_histogram(histogram, phreds, phred_length, phred_offset);
+        if (ret != 0) {
+            return NULL;
+        }
+        total_phred_length += phred_length;
     }
-    if (phred_scores == Py_None) {
-        PyErr_Format(
-            PyExc_ValueError,
-            "SequenceRecord object with name %R does not have quality scores "
-            "(FASTA record)", PyObject_GetAttrString(record, "name")
-        );
-        return NULL;
-    }
-    uint8_t *phreds = PyUnicode_DATA(phred_scores);
-    Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
-    double median = qualmedian(phreds, phred_length, self->phred_offset);
-    if (median < 0) {
+    double median = median_from_histogram(histogram, total_phred_length, phred_offset);
+    if (median < 0.0) {
         return NULL;
     }
     self->total += 1;
@@ -430,41 +500,57 @@ MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 static PyObject * 
 MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 {
-    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
-    if (record == NULL) {
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    if (record_tuple == NULL) {
         return NULL;
     }
-    PyObject *sequence = SequenceRecord_GetSequence(record);
-    if (sequence == NULL) {
-        return NULL;
+    PyObject *record;
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(record_tuple, i);
+        PyObject *sequence = SequenceRecord_GetSequence(record);
+        if (sequence == NULL) {
+            return NULL;
+        }
+        Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
+        // If any of the records passes the minimum length we pass.
+        // R1 and R2 sequence the same molecule so this is valid.
+        if (length >= self->threshold_i) {
+            self->pass += 1;
+            self->total += 1;
+            Py_RETURN_TRUE;
+        }
     }
-    Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
-    int pass = length >= self->threshold_i;
     self->total += 1;
-    if (pass) {
-        self->pass += 1;
-    }
-    return PyBool_FromLong(pass);
+    Py_RETURN_FALSE;
 }
 
 static PyObject *
 MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record = GenericFilter_ParseArgsToRecord(args, kwargs);
-    if (record == NULL) {
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    if (record_tuple == NULL) {
         return NULL;
     }
-    PyObject *sequence = SequenceRecord_GetSequence(record);
-    if (sequence == NULL) {
-        return NULL;
-    }    
-    Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
-    int pass = length <= self->threshold_i;
+    PyObject *record;
+    Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
+    for (Py_ssize_t i=0; i < record_tuple_length; i++) {
+        record = PyTuple_GET_ITEM(record_tuple, i);
+        PyObject *sequence = SequenceRecord_GetSequence(record);
+        if (sequence == NULL) {
+            return NULL;
+        }
+        Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
+        // If any of the records exceeds the maximum length we fail.
+        // R1 and R2 sequence the same molecule so this is valid.
+        if (length > self->threshold_i) {
+            self->total += 1;
+            Py_RETURN_FALSE;
+        }
+    }
+    self->pass += 1;
     self->total += 1;
-    if (pass) {
-        self->pass += 1;
-    }
-    return PyBool_FromLong(pass);   
+    Py_RETURN_TRUE;
 }
 
 static PyTypeObject AverageErrorRateFilter_Type = {

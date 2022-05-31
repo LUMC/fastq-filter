@@ -27,10 +27,14 @@ import dnaio
 import xopen  # type: ignore
 
 from ._filters import (
+    AverageErrorRateFilter,
     DEFAULT_PHRED_SCORE_OFFSET,
+    MaximumLengthFilter,
+    MedianQualityFilter,
+    MinimumLengthFilter,
     average_error_rate,
     qualmean,
-    qualmedian
+    qualmedian,
 )
 
 __version__ = "0.3.0-dev"
@@ -43,6 +47,7 @@ __all__ = [
     "MaximumLengthFilter",
     "MedianQualityFilter",
     "MinimumLengthFilter",
+    "average_error_rate",
     "qualmean",
     "qualmedian",
     "DEFAULT_PHRED_SCORE_OFFSET"
@@ -118,42 +123,6 @@ def filter_fastq(input_files: List[str], output_files: List[str],
                 output.write(record.fastq_bytes())
 
 
-def MinimumLengthFilter(threshold: int):
-    def filterfunc(record: dnaio.SequenceRecord):
-        return len(record) >= threshold
-
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        return any(map(filterfunc, records))
-
-    return combined_filter
-
-
-def MaximumLengthFilter(threshold: int):
-    def filterfunc(record: dnaio.SequenceRecord):
-        return len(record) <= threshold
-
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        return all(map(filterfunc, records))
-
-    return combined_filter
-
-
-def AverageErrorRateFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        phred_scores = "".join([record.qualities for record in records
-                                if record.qualities is not None])
-        return average_error_rate(phred_scores, phred_offset) <= threshold
-    return combined_filter
-
-
-def MedianQualityFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        phred_scores = "".join([record.qualities for record in records
-                                if record.qualities is not None])
-        return qualmedian(phred_scores, phred_offset) >= threshold
-    return combined_filter
-
-
 def argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.description = "Filter FASTQ files on various metrics."
@@ -201,8 +170,8 @@ def main():
     if args.average_error_rate:
         filters.append(AverageErrorRateFilter(args.average_error_rate))
     if args.mean_quality:
-        average_error_rate = 10 ** -(args.mean_quality / 10)
-        filters.append(AverageErrorRateFilter(average_error_rate))
+        error_rate = 10 ** -(args.mean_quality / 10)
+        filters.append(AverageErrorRateFilter(error_rate))
     if args.median_quality:
         filters.append(MedianQualityFilter(args.median_quality))
     filter_fastq(filters=filters,
