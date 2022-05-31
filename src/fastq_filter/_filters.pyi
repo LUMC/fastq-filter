@@ -28,6 +28,7 @@ class _Filter:
     threshold: Union[int, float]
     passed: int
     total: int
+    name: str
 
     def __init__(self): ...
 
