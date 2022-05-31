@@ -197,10 +197,29 @@ def main():
         filters.append(AverageErrorRateFilter(error_rate))
     if args.median_quality:
         filters.append(MedianQualityFilter(args.median_quality))
+    for filter in filters:
+        log.info(f"{filter.name}: {filter.threshold}")
+    if not filters:
+        log.warning("No filters were applied. Was this intentional?")
+
     filter_fastq(filters=filters,
                  input_files=args.input,
                  output_files=output,
                  compression_level=args.compression_level)
+
+    if filters:
+        total = filters[0].total
+        passed = filters[-1].passed
+        failed = total - passed
+        log.info(f"processed {total} reads.")
+        log.info(f"passed: {passed} ({passed * 100 / total :.2f}%)")
+        log.info(f"failed: {failed} ({failed * 100 / total :.2f}%)")
+
+    for filter in filters:
+        log.debug(f"{filter.name}: "
+                  f"{filter.total} processed, {filter.passed} passed "
+                  f"({filter.passed * 100 / filter.total :.2f}%)")
+
 
 
 if __name__ == "__main__":  # pragma: no cover
