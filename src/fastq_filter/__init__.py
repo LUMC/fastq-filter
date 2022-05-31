@@ -28,9 +28,13 @@ import xopen  # type: ignore
 
 from ._filters import (
     DEFAULT_PHRED_SCORE_OFFSET,
+    AverageErrorRateFilter,
+    MaximumLengthFilter,
+    MedianQualityFilter,
+    MinimumLengthFilter,
     average_error_rate,
     qualmean,
-    qualmedian
+    qualmedian,
 )
 
 __version__ = "0.3.0-dev"
@@ -116,42 +120,6 @@ def filter_fastq(input_files: List[str], output_files: List[str],
         for records in filtered_fastq_records:
             for record, output in zip(records, outputs):
                 output.write(record.fastq_bytes())
-
-
-def MinimumLengthFilter(threshold: int):
-    def filterfunc(record: dnaio.SequenceRecord):
-        return len(record) >= threshold
-
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        return any(map(filterfunc, records))
-
-    return combined_filter
-
-
-def MaximumLengthFilter(threshold: int):
-    def filterfunc(record: dnaio.SequenceRecord):
-        return len(record) <= threshold
-
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        return all(map(filterfunc, records))
-
-    return combined_filter
-
-
-def AverageErrorRateFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        phred_scores = "".join([record.qualities for record in records
-                                if record.qualities is not None])
-        return average_error_rate(phred_scores, phred_offset) <= threshold
-    return combined_filter
-
-
-def MedianQualityFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        phred_scores = "".join([record.qualities for record in records
-                                if record.qualities is not None])
-        return qualmedian(phred_scores, phred_offset) >= threshold
-    return combined_filter
 
 
 def argument_parser() -> argparse.ArgumentParser:
