@@ -76,14 +76,28 @@ def multiple_files_to_records(input_files: List[str],
                               ) -> Iterator[Tuple[dnaio.SequenceRecord, ...]]:
     readers = [file_to_fastq_records(f) for f in input_files]
     iterators = [iter(reader) for reader in readers]
-    for records in zip(*iterators):
-        if len(records) > 1 and not dnaio.records_are_mates(*records):
-            raise dnaio.FastqFormatError(
-                f"Records are out of sync, names "
-                f"{', '.join(r.name for r in records)} do not match.",
-                line=None
-            )
-        yield records
+
+    # By differentiating between single, paired and multiple files we can
+    # choose the fastest method for each situation.
+    if len(iterators) == 1:
+        yield from zip(iterators[0])  # This yields tuples of length 1.
+    elif len(iterators) == 2:
+        for record1, record2 in zip(*iterators):
+            if not record1.is_mate(record2):
+                raise dnaio.FastqFormatError(
+                    f"Records are out of sync, names "
+                    f"{record1}, f{record2} do not match.",
+                    line=None)
+            yield record1, record2
+    else:
+        for records in zip(*iterators):
+            if not dnaio.records_are_mates(*records):
+                raise dnaio.FastqFormatError(
+                    f"Records are out of sync, names "
+                    f"{', '.join(r.name for r in records)} do not match.",
+                    line=None
+                )
+            yield records
     # Check if all iterators are exhausted.
     for iterator in iterators:
         try:
@@ -119,9 +133,30 @@ def filter_fastq(input_files: List[str], output_files: List[str],
                    xopen.xopen(output_file, threads=0, mode="wb",
                                compresslevel=compression_level))
                    for output_file in output_files]
-        for records in filtered_fastq_records:
-            for record, output in zip(records, outputs):
-                output.write(record.fastq_bytes())
+        # Use faster methods for more common cases before falling back to
+        # generic multiple files mode (which is slower).
+        if len(outputs) == 1:
+            output = outputs[0]
+            for records in filtered_fastq_records:
+                output.write(records[0].fastq_bytes())
+        elif len(outputs) == 2:
+            output1 = outputs[0]
+            output2 = outputs[1]
+            for record1, record2 in filtered_fastq_records:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
+        elif len(outputs) == 3:
+            output1 = outputs[0]
+            output2 = outputs[1]
+            output3 = outputs[2]
+            for record1, record2, record3 in filtered_fastq_records:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
+                output3.write(record3.fastq_bytes())
+        else:  # More than 3 files is quite uncommon.
+            for records in filtered_fastq_records:
+                for record, output in zip(records, outputs):
+                    output.write(record.fastq_bytes())
 
 
 def initiate_logger(verbose: int = 0, quiet: int = 0):

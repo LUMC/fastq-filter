@@ -9,6 +9,12 @@ Changelog
 
 0.3.0-dev
 --------------------
++ Improved performance by:
+
+  + Slight rewrites in the multiple FASTQ pipeline. Cases with one, two, three
+    and multiple FASTQ files are now handled separately. This vastly improves
+    the speed of especially the single and paired end instances.
+  + Rewriting the filters in C.
 + Added logging with basic stats. When ``--verbose`` is set, the counts for
   individual filters are reported. With ``--quiet`` logging can be turned off.
 + Mildly improved performance by porting the filters to C.
