@@ -137,8 +137,8 @@ def filter_fastq(input_files: List[str], output_files: List[str],
         # generic multiple files mode (which is slower).
         if len(outputs) == 1:
             output = outputs[0]
-            for records in filtered_fastq_records:
-                output.write(records[0].fastq_bytes())
+            for record, in filtered_fastq_records:
+                output.write(record.fastq_bytes())
         elif len(outputs) == 2:
             output1 = outputs[0]
             output2 = outputs[1]
