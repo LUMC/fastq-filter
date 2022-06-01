@@ -7,7 +7,7 @@ Changelog
 .. NOTE: This document is user facing. Please word the changes in such a way
 .. that users understand how the changes affect the new version.
 
-0.3.0-dev
+0.3.0
 --------------------
 + Improved performance by:
 
