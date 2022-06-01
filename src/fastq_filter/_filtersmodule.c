@@ -508,11 +508,10 @@ MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
     Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
         record = PyTuple_GET_ITEM(record_tuple, i);
-        PyObject *sequence = SequenceRecord_GetSequence(record);
-        if (sequence == NULL) {
+        Py_ssize_t length = PyObject_Length(record);
+        if (length < 0) {
             return NULL;
         }
-        Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
         // If any of the records passes the minimum length we pass.
         // R1 and R2 sequence the same molecule so this is valid.
         if (length >= self->threshold_i) {
@@ -536,11 +535,10 @@ MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
     Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
         record = PyTuple_GET_ITEM(record_tuple, i);
-        PyObject *sequence = SequenceRecord_GetSequence(record);
-        if (sequence == NULL) {
+        Py_ssize_t length = PyObject_Length(record);
+        if (length < 0) {
             return NULL;
         }
-        Py_ssize_t length = PyUnicode_GET_LENGTH(sequence);
         // If any of the records exceeds the maximum length we fail.
         // R1 and R2 sequence the same molecule so this is valid.
         if (length > self->threshold_i) {
