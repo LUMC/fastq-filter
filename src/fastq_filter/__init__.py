@@ -76,14 +76,17 @@ def multiple_files_to_records(input_files: List[str],
                               ) -> Iterator[Tuple[dnaio.SequenceRecord, ...]]:
     readers = [file_to_fastq_records(f) for f in input_files]
     iterators = [iter(reader) for reader in readers]
-    for records in zip(*iterators):
-        if len(records) > 1 and not dnaio.records_are_mates(*records):
-            raise dnaio.FastqFormatError(
-                f"Records are out of sync, names "
-                f"{', '.join(r.name for r in records)} do not match.",
-                line=None
-            )
-        yield records
+    if len(iterators) == 1:
+        yield from zip(*iterators)
+    else:
+        for records in zip(*iterators):
+            if not dnaio.records_are_mates(*records):
+                raise dnaio.FastqFormatError(
+                    f"Records are out of sync, names "
+                    f"{', '.join(r.name for r in records)} do not match.",
+                    line=None
+                )
+            yield records
     # Check if all iterators are exhausted.
     for iterator in iterators:
         try:
