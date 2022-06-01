@@ -76,8 +76,19 @@ def multiple_files_to_records(input_files: List[str],
                               ) -> Iterator[Tuple[dnaio.SequenceRecord, ...]]:
     readers = [file_to_fastq_records(f) for f in input_files]
     iterators = [iter(reader) for reader in readers]
+
+    # By differentiating between single, paired and multiple files we can
+    # choose the fastest method for each situation.
     if len(iterators) == 1:
         yield from zip(*iterators)
+    elif len(iterators) == 2:
+        for record1, record2 in zip(*iterators):
+            if not record1.is_mate(record2):
+                raise dnaio.FastqFormatError(
+                    f"Records are out of sync, names "
+                    f"{record1}, f{record2} do not match.",
+                    line=None)
+            yield record1, record2
     else:
         for records in zip(*iterators):
             if not dnaio.records_are_mates(*records):
