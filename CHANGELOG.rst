@@ -17,7 +17,6 @@ Changelog
   + Rewriting the filters in C.
 + Added logging with basic stats. When ``--verbose`` is set, the counts for
   individual filters are reported. With ``--quiet`` logging can be turned off.
-+ Mildly improved performance by porting the filters to C.
 
 0.2.0
 --------------------
