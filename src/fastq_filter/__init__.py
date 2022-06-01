@@ -80,7 +80,7 @@ def multiple_files_to_records(input_files: List[str],
     # By differentiating between single, paired and multiple files we can
     # choose the fastest method for each situation.
     if len(iterators) == 1:
-        yield from zip(*iterators)
+        yield from zip(iterators[0])  # This yields tuples of length 1.
     elif len(iterators) == 2:
         for record1, record2 in zip(*iterators):
             if not record1.is_mate(record2):
