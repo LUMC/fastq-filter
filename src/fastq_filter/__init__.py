@@ -133,10 +133,18 @@ def filter_fastq(input_files: List[str], output_files: List[str],
                    xopen.xopen(output_file, threads=0, mode="wb",
                                compresslevel=compression_level))
                    for output_file in output_files]
+        # Use faster methods for more common cases before falling back to
+        # generic multiple files mode (which is slower).
         if len(outputs) == 1:
             output = outputs[0]
             for records in filtered_fastq_records:
                 output.write(records[0].fastq_bytes())
+        elif len(outputs) == 2:
+            output1 = outputs[0]
+            output2 = outputs[1]
+            for record1, record2 in filtered_fastq_records:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
         else:
             for records in filtered_fastq_records:
                 for record, output in zip(records, outputs):
