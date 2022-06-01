@@ -145,7 +145,15 @@ def filter_fastq(input_files: List[str], output_files: List[str],
             for record1, record2 in filtered_fastq_records:
                 output1.write(record1.fastq_bytes())
                 output2.write(record2.fastq_bytes())
-        else:
+        elif len(outputs) == 3:
+            output1 = outputs[0]
+            output2 = outputs[1]
+            output3 = outputs[2]
+            for record1, record2, record3 in filtered_fastq_records:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
+                output3.write(record3.fastq_bytes())
+        else:  # More than 3 files is quite uncommon.
             for records in filtered_fastq_records:
                 for record, output in zip(records, outputs):
                     output.write(record.fastq_bytes())
