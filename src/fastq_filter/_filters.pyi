@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from typing import Union
+from typing import Tuple, Union
 
 from dnaio import SequenceRecord
 
@@ -28,10 +28,11 @@ class _Filter:
     threshold: Union[int, float]
     passed: int
     total: int
+    name: str
 
     def __init__(self): ...
 
-    def __call__(self, __record: SequenceRecord) -> bool: ...
+    def __call__(self, __records: Tuple[SequenceRecord, ...]) -> bool: ...
 
 class _QualityFilter(_Filter):
     phred_offset: int

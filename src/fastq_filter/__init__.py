@@ -20,6 +20,7 @@
 import argparse
 import contextlib
 import functools
+import logging
 from typing import Callable, Iterable, Iterator, List, Tuple
 
 import dnaio
@@ -27,13 +28,17 @@ import dnaio
 import xopen  # type: ignore
 
 from ._filters import (
+    AverageErrorRateFilter,
     DEFAULT_PHRED_SCORE_OFFSET,
+    MaximumLengthFilter,
+    MedianQualityFilter,
+    MinimumLengthFilter,
     average_error_rate,
     qualmean,
-    qualmedian
+    qualmedian,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "file_to_fastq_records",
@@ -43,6 +48,7 @@ __all__ = [
     "MaximumLengthFilter",
     "MedianQualityFilter",
     "MinimumLengthFilter",
+    "average_error_rate",
     "qualmean",
     "qualmedian",
     "DEFAULT_PHRED_SCORE_OFFSET"
@@ -70,14 +76,28 @@ def multiple_files_to_records(input_files: List[str],
                               ) -> Iterator[Tuple[dnaio.SequenceRecord, ...]]:
     readers = [file_to_fastq_records(f) for f in input_files]
     iterators = [iter(reader) for reader in readers]
-    for records in zip(*iterators):
-        if len(records) > 1 and not dnaio.records_are_mates(*records):
-            raise dnaio.FastqFormatError(
-                f"Records are out of sync, names "
-                f"{', '.join(r.name for r in records)} do not match.",
-                line=None
-            )
-        yield records
+
+    # By differentiating between single, paired and multiple files we can
+    # choose the fastest method for each situation.
+    if len(iterators) == 1:
+        yield from zip(iterators[0])  # This yields tuples of length 1.
+    elif len(iterators) == 2:
+        for record1, record2 in zip(*iterators):
+            if not record1.is_mate(record2):
+                raise dnaio.FastqFormatError(
+                    f"Records are out of sync, names "
+                    f"{record1}, f{record2} do not match.",
+                    line=None)
+            yield record1, record2
+    else:
+        for records in zip(*iterators):
+            if not dnaio.records_are_mates(*records):
+                raise dnaio.FastqFormatError(
+                    f"Records are out of sync, names "
+                    f"{', '.join(r.name for r in records)} do not match.",
+                    line=None
+                )
+            yield records
     # Check if all iterators are exhausted.
     for iterator in iterators:
         try:
@@ -113,45 +133,44 @@ def filter_fastq(input_files: List[str], output_files: List[str],
                    xopen.xopen(output_file, threads=0, mode="wb",
                                compresslevel=compression_level))
                    for output_file in output_files]
-        for records in filtered_fastq_records:
-            for record, output in zip(records, outputs):
+        # Use faster methods for more common cases before falling back to
+        # generic multiple files mode (which is slower).
+        if len(outputs) == 1:
+            output = outputs[0]
+            for record, in filtered_fastq_records:
                 output.write(record.fastq_bytes())
+        elif len(outputs) == 2:
+            output1 = outputs[0]
+            output2 = outputs[1]
+            for record1, record2 in filtered_fastq_records:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
+        elif len(outputs) == 3:
+            output1 = outputs[0]
+            output2 = outputs[1]
+            output3 = outputs[2]
+            for record1, record2, record3 in filtered_fastq_records:
+                output1.write(record1.fastq_bytes())
+                output2.write(record2.fastq_bytes())
+                output3.write(record3.fastq_bytes())
+        else:  # More than 3 files is quite uncommon.
+            for records in filtered_fastq_records:
+                for record, output in zip(records, outputs):
+                    output.write(record.fastq_bytes())
 
 
-def MinimumLengthFilter(threshold: int):
-    def filterfunc(record: dnaio.SequenceRecord):
-        return len(record) >= threshold
-
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        return any(map(filterfunc, records))
-
-    return combined_filter
-
-
-def MaximumLengthFilter(threshold: int):
-    def filterfunc(record: dnaio.SequenceRecord):
-        return len(record) <= threshold
-
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        return all(map(filterfunc, records))
-
-    return combined_filter
-
-
-def AverageErrorRateFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        phred_scores = "".join([record.qualities for record in records
-                                if record.qualities is not None])
-        return average_error_rate(phred_scores, phred_offset) <= threshold
-    return combined_filter
-
-
-def MedianQualityFilter(threshold: float, phred_offset=DEFAULT_PHRED_SCORE_OFFSET):
-    def combined_filter(records: Tuple[dnaio.SequenceRecord, ...]):
-        phred_scores = "".join([record.qualities for record in records
-                                if record.qualities is not None])
-        return qualmedian(phred_scores, phred_offset) >= threshold
-    return combined_filter
+def initiate_logger(verbose: int = 0, quiet: int = 0):
+    log_level = logging.INFO - 10 * (verbose - quiet)
+    logger = logging.getLogger("fastq-filter")
+    logger.setLevel(log_level)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    formatter = logging.Formatter(
+        "{asctime}:{levelname}:{name}: {message}",
+        datefmt="%m/%d/%Y %I:%M:%S",
+        style="{")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
 
 def argument_parser() -> argparse.ArgumentParser:
@@ -186,6 +205,10 @@ def argument_parser() -> argparse.ArgumentParser:
                              f"Relevant when output files have a .gz "
                              f"extension. Default: {DEFAULT_COMPRESSION_LEVEL}"
                         )
+    parser.add_argument("--verbose", action="count", default=0,
+                        help="Report stats on individual filters.")
+    parser.add_argument("--quiet", action="count", default=0,
+                        help="Turn of logging output.")
     return parser
 
 
@@ -193,6 +216,12 @@ def main():
     args = argument_parser().parse_args()
     output = args.output if args.output else ["-"]
     filters = []
+
+    initiate_logger(args.verbose, args.quiet)
+    log = logging.getLogger("fastq-filter")
+    log.info(f"input files: {', '.join(args.input)}")
+    log.info(f"output files: {', '.join(args.output)}")
+
     # Filters are ordered from low cost to high cost.
     if args.min_length:
         filters.append(MinimumLengthFilter(args.min_length))
@@ -201,14 +230,32 @@ def main():
     if args.average_error_rate:
         filters.append(AverageErrorRateFilter(args.average_error_rate))
     if args.mean_quality:
-        average_error_rate = 10 ** -(args.mean_quality / 10)
-        filters.append(AverageErrorRateFilter(average_error_rate))
+        error_rate = 10 ** -(args.mean_quality / 10)
+        filters.append(AverageErrorRateFilter(error_rate))
     if args.median_quality:
         filters.append(MedianQualityFilter(args.median_quality))
+    for filter in filters:
+        log.info(f"{filter.name}: {filter.threshold}")
+    if not filters:
+        log.warning("No filters were applied. Was this intentional?")
+
     filter_fastq(filters=filters,
                  input_files=args.input,
                  output_files=output,
                  compression_level=args.compression_level)
+
+    if filters:
+        total = filters[0].total
+        passed = filters[-1].passed
+        failed = total - passed
+        log.info(f"processed {total} reads.")
+        log.info(f"passed: {passed} ({passed * 100 / total :.2f}%)")
+        log.info(f"failed: {failed} ({failed * 100 / total :.2f}%)")
+
+    for filter in filters:
+        log.debug(f"{filter.name}: "
+                  f"{filter.total} processed, {filter.passed} passed "
+                  f"({filter.passed * 100 / filter.total :.2f}%)")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -7,6 +7,17 @@ Changelog
 .. NOTE: This document is user facing. Please word the changes in such a way
 .. that users understand how the changes affect the new version.
 
+0.3.0
+--------------------
++ Improved performance by:
+
+  + Slight rewrites in the multiple FASTQ pipeline. Cases with one, two, three
+    and multiple FASTQ files are now handled separately. This vastly improves
+    the speed of especially the single and paired end instances.
+  + Rewriting the filters in C.
++ Added logging with basic stats. When ``--verbose`` is set, the counts for
+  individual filters are reported. With ``--quiet`` logging can be turned off.
+
 0.2.0
 --------------------
 + Add ability for filtering paired sequences.
