@@ -122,9 +122,14 @@ def filter_fastq(input_files: List[str], output_files: List[str],
                    xopen.xopen(output_file, threads=0, mode="wb",
                                compresslevel=compression_level))
                    for output_file in output_files]
-        for records in filtered_fastq_records:
-            for record, output in zip(records, outputs):
-                output.write(record.fastq_bytes())
+        if len(outputs) == 1:
+            output = outputs[0]
+            for records in filtered_fastq_records:
+                output.write(records[0].fastq_bytes())
+        else:
+            for records in filtered_fastq_records:
+                for record, output in zip(records, outputs):
+                    output.write(record.fastq_bytes())
 
 
 def initiate_logger(verbose: int = 0, quiet: int = 0):
