@@ -32,16 +32,23 @@ static PyTypeObject *SequenceRecord = NULL;
 static PyObject *QualitiesAttrString = NULL;
 static size_t SequenceRecord_QualitiesOffset = 0;
 
+#define SequenceRecord_GET_QUALITIES(op) \
+    (*(PyObject **)((size_t)op + SequenceRecord_QualitiesOffset))
+
 static ssize_t 
 get_offset(PyObject *self, PyObject *member)
 {
-    PyObject **members = (PyObject **)(self + sizeof(PyObject));
-    for (size_t i=0; i<100; i++) {
-        if (members[i] == member) {
-            return sizeof(PyObject) + i * sizeof(PyObject *);
+    size_t self_address = (size_t)self;
+    size_t members_address = self_address + sizeof(PyObject);
+    // Assume all members are PyObject * and check them one by one.
+    for (size_t i=0; i<1000; i++) {
+        // Check what PyObject * is stored at the members address.
+        if (*(PyObject **)members_address == member) {
+            return members_address - self_address;
         }
+        members_address += sizeof(PyObject *);
     }
-    // Could not find member within first 800 bytes. Give up.
+    // Could not find member within first 100 positions. Give up.
     return -1;
 }
 
@@ -452,7 +459,7 @@ AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwar
     Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
         record = PyTuple_GET_ITEM(record_tuple, i);
-        phred_scores = PyObject_GetAttr(record, QualitiesAttrString);
+        PyObject *phred_scores = SequenceRecord_GET_QUALITIES(record);
         if (phred_scores == NULL) {
             return NULL;
         }
@@ -462,13 +469,11 @@ AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwar
                 "SequenceRecord object with name %R does not have quality scores "
                 "(FASTA record)", PyObject_GetAttrString(record, "name")
             );
-            Py_DECREF(phred_scores);
             return NULL;
         }
         phreds = PyUnicode_DATA(phred_scores);
         phred_length = PyUnicode_GET_LENGTH(phred_scores);
         double error_sum = sum_error_rate(phreds, phred_length, phred_offset);
-        Py_DECREF(phred_scores);
         if (error_sum < 0) {
             return NULL; 
         }
@@ -500,7 +505,7 @@ MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
     memset(histogram, 0, sizeof(size_t) * 128);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
         record = PyTuple_GET_ITEM(record_tuple, i);
-        PyObject *phred_scores = PyObject_GetAttr(record, QualitiesAttrString);
+        PyObject *phred_scores = SequenceRecord_GET_QUALITIES(record);
         if (phred_scores == NULL) {
             return NULL;
         }
@@ -510,13 +515,11 @@ MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
                 "SequenceRecord object with name %R does not have quality scores "
                 "(FASTA record)", PyObject_GetAttrString(record, "name")
             );
-            Py_DECREF(phred_scores);
             return NULL;
         }
         uint8_t *phreds = PyUnicode_DATA(phred_scores);
         Py_ssize_t phred_length = PyUnicode_GetLength(phred_scores);
         ret = make_histogram(histogram, phreds, phred_length, phred_offset);
-        Py_DECREF(phred_scores);
         if (ret != 0) {
             return NULL;
         }
