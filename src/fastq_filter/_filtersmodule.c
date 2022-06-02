@@ -30,7 +30,45 @@
 
 static PyTypeObject *SequenceRecord = NULL;
 static PyObject *QualitiesAttrString = NULL;
+static size_t SequenceRecord_QualitiesOffset = 0;
 
+static ssize_t 
+get_offset(PyObject *self, PyObject *member)
+{
+    PyObject **members = (PyObject **)(self + sizeof(PyObject));
+    for (size_t i=0; i<100; i++) {
+        if (members[i] == member) {
+            return sizeof(PyObject) + i * sizeof(PyObject *);
+        }
+    }
+    // Could not find member within first 800 bytes. Give up.
+    return -1;
+}
+
+static ssize_t 
+get_sequence_record_qualities_offset()
+{
+    PyObject *args = PyTuple_New(0);
+    PyObject *kwargs = PyDict_New();
+    PyObject *name = PyUnicode_FromString("name");
+    PyObject *sequence = PyUnicode_FromString("sequence");
+    PyObject *qualities = PyUnicode_FromString("qualitys");
+    PyDict_SetItemString(kwargs, "name", name);
+    PyDict_SetItemString(kwargs, "sequence", sequence);
+    PyDict_SetItemString(kwargs, "qualities", qualities);
+    PyObject *seqrecord = PyObject_Call((PyObject *)SequenceRecord, args, kwargs);
+    Py_DECREF(args); Py_DECREF(kwargs); 
+    Py_DECREF(name); Py_DECREF(sequence); Py_DECREF(qualities);
+    if (seqrecord == NULL) {
+        return -1;
+    }
+    qualities = PyObject_GetAttrString(seqrecord, "qualities");
+    if (qualities == NULL) {
+        Py_DECREF(seqrecord);
+        return -1;
+    }
+    return get_offset(seqrecord, qualities);
+}
 
 static inline double 
 sum_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
@@ -665,6 +703,12 @@ PyInit__filters(void)
     if (QualitiesAttrString == NULL) {
         return NULL; 
     }
+
+    ssize_t qualities_offset = get_sequence_record_qualities_offset();
+    if (qualities_offset < 0) {
+        return NULL;
+    }
+    SequenceRecord_QualitiesOffset = qualities_offset;
 
     MODULE_ADD_TYPE(m, AverageErrorRateFilter, AverageErrorRateFilter_Type)
     MODULE_ADD_TYPE(m, MedianQualityFilter, MedianQualityFilter_Type)
