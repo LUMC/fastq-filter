@@ -7,6 +7,10 @@ Changelog
 .. NOTE: This document is user facing. Please word the changes in such a way
 .. that users understand how the changes affect the new version.
 
+1.0.0-dev
+--------------------
++ Refactored the _filters module code slightly to remove global variables.
+
 0.3.0
 --------------------
 + Improved performance by:

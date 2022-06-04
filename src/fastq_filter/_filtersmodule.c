@@ -28,9 +28,6 @@
 #define MAXIMUM_PHRED_SCORE 126
 #define DEFAULT_PHRED_SCORE_OFFSET 33
 
-static PyTypeObject *SequenceRecord = NULL;
-static PyObject *QualitiesAttrString = NULL;
-
 
 static inline double 
 sum_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset) {
@@ -291,8 +288,18 @@ typedef struct {
     unsigned long long pass;
     double threshold_d;
     Py_ssize_t threshold_i;
+    PyTypeObject *sequence_record_class;
+    PyObject *sequence_record_atrr;
     uint8_t phred_offset;
 } FastqFilter;
+
+static void
+FastqFilter_dealloc(FastqFilter *self) 
+{
+    Py_CLEAR(self->sequence_record_class);
+    Py_CLEAR(self->sequence_record_atrr);
+    Py_TYPE(self)->tp_free((PyObject *)self);
+}
 
 #define GENERIC_FILTER_MEMBERS \
     {"total", T_ULONGLONG, offsetof(FastqFilter, total), READONLY, \
@@ -316,6 +323,21 @@ static PyMemberDef GenericLengthFilterMembers[] = {
     {NULL}
 };
 
+
+static PyTypeObject * 
+import_dnaio_sequence_record() 
+{
+    PyObject *dnaio = PyImport_ImportModule("dnaio");
+    if (dnaio == NULL) {
+        return NULL;
+    }
+    PyTypeObject *SequenceRecord = (PyTypeObject *)PyObject_GetAttrString(dnaio, "SequenceRecord");
+    if (SequenceRecord == NULL) {
+        return NULL;
+    }
+    return SequenceRecord;
+}
+
 static PyObject *
 GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
@@ -329,12 +351,22 @@ GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs
         &phred_offset)) {
             return NULL;
     }
+    PyTypeObject *sequence_record_class = import_dnaio_sequence_record();
+    if (sequence_record_class == NULL) {
+        return NULL;
+    }
+    PyObject *sequence_record_attr = PyUnicode_FromString("qualities");
+    if (sequence_record_attr == NULL) {
+        return NULL;
+    }
     FastqFilter *self = PyObject_New(FastqFilter, type);
     self->phred_offset = phred_offset;
     self->threshold_d = threshold_d;
     self->threshold_i = 0;
     self->total = 0;
     self->pass = 0;
+    self->sequence_record_class = sequence_record_class;
+    self->sequence_record_atrr = sequence_record_attr;
     return (PyObject *)self;
 }
 
@@ -350,17 +382,27 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         &threshold_i)) {
             return NULL;
     }
+    PyTypeObject *sequence_record_class = import_dnaio_sequence_record();
+    if (sequence_record_class == NULL) {
+        return NULL;
+    }
     FastqFilter *self = PyObject_New(FastqFilter, type);
     self->phred_offset = phred_offset;
     self->threshold_i = threshold_i;
     self->threshold_d = 0.0L;
     self-> total = 0;
     self->pass = 0;
+    self->sequence_record_class = sequence_record_class;
+    // The PyObject_Length method can be used directly on a dnaio.SequenceRecord
+    // rather than getting the "sequence" attribute and using PyUnicode_Length.
+    self->sequence_record_atrr = NULL;
     return (PyObject *)self;
 }
 
 static PyObject *
-GenericFilter_ParseArgsToRecordTuple(PyObject *args, PyObject *kwargs) 
+GenericFilter_ParseArgsToRecordTuple(PyObject *args, 
+                                     PyObject *kwargs, 
+                                     PyTypeObject *sequence_record_class) 
 {
     if (kwargs != NULL) {
         PyErr_Format(PyExc_TypeError, 
@@ -385,7 +427,7 @@ GenericFilter_ParseArgsToRecordTuple(PyObject *args, PyObject *kwargs)
     PyObject *record;
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
         record = PyTuple_GET_ITEM(arg, i);
-        if (!(Py_TYPE(record) == SequenceRecord)) {
+        if (!(Py_TYPE(record) == sequence_record_class)) {
             PyErr_Format(
                 PyExc_TypeError, 
                 "All records must be of type dnaio.SequenceRecord, "
@@ -400,7 +442,8 @@ GenericFilter_ParseArgsToRecordTuple(PyObject *args, PyObject *kwargs)
 static PyObject *
 AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
+        args, kwargs, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
@@ -414,7 +457,7 @@ AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwar
     Py_ssize_t record_tuple_length = PyTuple_GET_SIZE(record_tuple);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
         record = PyTuple_GET_ITEM(record_tuple, i);
-        phred_scores = PyObject_GetAttr(record, QualitiesAttrString);
+        phred_scores = PyObject_GetAttr(record, self->sequence_record_atrr);
         if (phred_scores == NULL) {
             return NULL;
         }
@@ -449,7 +492,8 @@ AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwar
 static PyObject *
 MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
+        args, kwargs, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
@@ -462,7 +506,7 @@ MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
     memset(histogram, 0, sizeof(size_t) * 128);
     for (Py_ssize_t i=0; i < record_tuple_length; i++) {
         record = PyTuple_GET_ITEM(record_tuple, i);
-        PyObject *phred_scores = PyObject_GetAttr(record, QualitiesAttrString);
+        PyObject *phred_scores = PyObject_GetAttr(record, self->sequence_record_atrr);
         if (phred_scores == NULL) {
             return NULL;
         }
@@ -500,7 +544,8 @@ MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 static PyObject * 
 MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
+        args, kwargs, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
@@ -527,7 +572,8 @@ MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(args, kwargs);
+    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
+        args, kwargs, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
@@ -591,6 +637,7 @@ static PyTypeObject AverageErrorRateFilter_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "_filter.AverageErrorRateFilter",
     .tp_basicsize = sizeof(FastqFilter),
+    .tp_dealloc = (destructor)FastqFilter_dealloc,
     .tp_new = GenericQualityFilter__new__,
     .tp_call = (ternaryfunc)AverageErrorRateFilter__call__,
     .tp_members = GenericQualityFilterMembers,
@@ -601,6 +648,7 @@ static PyTypeObject MedianQualityFilter_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "_filter.MedianQualityFilter",
     .tp_basicsize = sizeof(FastqFilter),
+    .tp_dealloc = (destructor)FastqFilter_dealloc,
     .tp_new = GenericQualityFilter__new__,
     .tp_call = (ternaryfunc)MedianQualityFilter__call__,
     .tp_members = GenericQualityFilterMembers,
@@ -611,6 +659,7 @@ static PyTypeObject MinimumLengthFilter_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "_filter.MinimumLengthFilter",
     .tp_basicsize = sizeof(FastqFilter),
+    .tp_dealloc = (destructor)FastqFilter_dealloc,
     .tp_new = GenericLengthFilter__new__,
     .tp_call = (ternaryfunc)MinLengthFilter__call__,
     .tp_members = GenericLengthFilterMembers,
@@ -621,6 +670,7 @@ static PyTypeObject MaximumLengthFilter_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "_filter.MaximumLengthFilter",
     .tp_basicsize = sizeof(FastqFilter),
+    .tp_dealloc = (destructor)FastqFilter_dealloc,
     .tp_new = GenericLengthFilter__new__,
     .tp_call = (ternaryfunc)MaxLengthFilter__call__,
     .tp_members = GenericLengthFilterMembers,
@@ -651,19 +701,6 @@ PyInit__filters(void)
     m = PyModule_Create(&_filters_module);
     if (m == NULL) {
         return NULL;
-    }
-    PyObject *dnaio = PyImport_ImportModule("dnaio");
-    if (dnaio == NULL) {
-        return NULL;
-    }
-    SequenceRecord = (PyTypeObject *)PyObject_GetAttrString(dnaio, "SequenceRecord");
-    if (SequenceRecord == NULL) {
-        return NULL;
-    }
-
-    QualitiesAttrString = PyUnicode_FromString("qualities");
-    if (QualitiesAttrString == NULL) {
-        return NULL; 
     }
 
     MODULE_ADD_TYPE(m, AverageErrorRateFilter, AverageErrorRateFilter_Type)
