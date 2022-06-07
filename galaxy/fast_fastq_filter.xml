@@ -7,28 +7,54 @@
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
         set -e;
-        fastq-filter -o '${output1}.gz'
-        #if $minimum_length
-        --min-length $minimum_length
+        fastq-filter
+        #if $filters.minimum_length
+        --min-length $filters.minimum_length
         #end if
-        #if $maximum_length
-        --max-length $maximum_length
+        #if $filters.maximum_length
+        --max-length $filters.maximum_length
         #end if
-        #if $average_error_rate
-        --average-error-rate $average_error_rate
+        #if $filters.average_error_rate
+        --average-error-rate $filters.average_error_rate
         #end if
-        #if $mean_quality
-        --mean-quality $mean_quality
+        #if $filters.mean_quality
+        --mean-quality $filters.mean_quality
         #end if
-        #if $median_quality
-        --median-quality $median_quality
+        #if $filters.median_quality
+        --median-quality $filters.median_quality
         #end if
         --verbose
-        '$input1';
-        mv ${output1}.gz $output1
+        -o '${output1}.gz'
+        #if str($library.type) == "paired":
+        -o ${output2}.gz
+        #end if
+
+        '$library.input_1'
+        #if str($library.type) == "paired":
+        '$library.input_2'
+        #end if
+        ;
+
+        mv '${output1}.gz' '$output1';
+        #if str($library.type) == "paired":
+        mv '${output2}.gz' '$output2';
+        #end if
     ]]></command>
     <inputs>
-        <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
+        <conditional name="library">
+            <param name="type" type="select" label="Single-end or Paired-end reads?">
+                <option value="single">Single-end</option>
+                <option value="paired">Paired-end</option>
+            </param>
+            <when value="single">
+                <param type="data" name="input_1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
+            </when>
+            <when value="paired">
+                <param type="data" name="input_1" label="Input FASTQ file #1" format="fastqsanger,fastqsanger.gz" />
+                <param type="data" name="input_2" label="Input FASTQ file #2" format="fastqsanger,fastqsanger.gz" />
+            </when>
+        </conditional>
+
         <section name="filters" title="Filters" expanded="true">
             <help>Only filters with a value will be used.></help>
             <param name="minimum_length" type="integer" label="Minimum length"
@@ -63,6 +89,9 @@
          to be updated. An option is using format auto_detect, so we do not have to conditionally set
          fastqsanger or fastqsanger.gz-->
         <data name="output1" format="fastqsanger.gz" />
+        <data name="output2" format="fastqsanger.gz">
+            <filter>library['type'] == 'paired'</filter>
+        </data>
         <!--When the tool is updated for paired input, the optional paired output can probably be
         found in the cutadapt wrapper -->
     </outputs>
