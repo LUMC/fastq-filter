@@ -38,13 +38,42 @@
         </test>
     </tests>
     <help><![CDATA[
-    The following filters are available:
+    usage: fastq-filter [-h] [-o OUTPUT] [-l MIN_LENGTH] [-L MAX_LENGTH]
+                        [-e AVERAGE_ERROR_RATE] [-q MEAN_QUALITY]
+                        [-Q MEDIAN_QUALITY] [-c COMPRESSION_LEVEL] [--verbose]
+                        [--quiet]
+                        input [input ...]
 
-    + mean_quality:<quality>         The mean quality of the FASTQ record is equal or above the given quality value.
-    + median_quality:<quality>       The median quality of the FASTQ record is equal or above the given quality value.
-    + min_length:<length>            The length of the sequence in the FASTQ record is at least min_length
-    + max_length:<length>            The length of the sequence in the FASTQ record is at most max_length
+    Filter FASTQ files on various metrics.
 
+    positional arguments:
+      input                 Input FASTQ files. Compression format automatically
+                            detected. Use - for stdin.
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -o OUTPUT, --output OUTPUT
+                            Output FASTQ files. Compression format automatically
+                            determined by file extension. Flag can be used
+                            multiple times. An output must be given for each
+                            input. Default: stdout.
+      -l MIN_LENGTH, --min-length MIN_LENGTH
+                            The minimum length for a read.
+      -L MAX_LENGTH, --max-length MAX_LENGTH
+                            The maximum length for a read.
+      -e AVERAGE_ERROR_RATE, --average-error-rate AVERAGE_ERROR_RATE
+                            The minimum average per base error rate.
+      -q MEAN_QUALITY, --mean-quality MEAN_QUALITY
+                            Average quality. Same as the '--average-error-rate'
+                            option but specified with a phred score. I.e '-q 30'
+                            is equivalent to '-e 0.001'.
+      -Q MEDIAN_QUALITY, --median-quality MEDIAN_QUALITY
+                            The minimum median phred score.
+      -c COMPRESSION_LEVEL, --compression-level COMPRESSION_LEVEL
+                            Compression level for the output files. Relevant when
+                            output files have a .gz extension. Default: 2
+      --verbose             Report stats on individual filters.
+      --quiet               Turn of logging output.
     ]]></help>
     <citations>
         <citation type="bibtex">
