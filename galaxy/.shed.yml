@@ -2,16 +2,17 @@ categories:
   - Fastq Manipulation
 description: "A fast FASTQ filter program that filters on length and quality."
 long_description: |
-  A fastq FASTQ filter program
+  A fast FASTQ filter program
   
   This program can apply one or multiple filters on FASTQ files. It works 
   on plain FASTQ files as well as on compressed (fastq.gz) files.
   
   Currently available filters:
-    - min_length
-    - max_length
-    - mean_quality
-    - median_quality
+    - Minimum length
+    - Maximum length
+    - Average error rate
+    - Mean quality
+    - Median quality (deprecated)
  
   Fastq-filter correctly takes into account that quality scores are log scores
   when calculating the mean. 
