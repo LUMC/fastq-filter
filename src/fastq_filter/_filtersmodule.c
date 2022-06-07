@@ -56,7 +56,7 @@ sum_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_o
  * @param phred_offset The offset for the phred scores
  * @return double The average error rate or -1.0L on error.
  */
-static double 
+static inline double 
 average_error_rate(const uint8_t *phred_scores, size_t phred_length, uint8_t phred_offset)
 {
     double total_error_rate = sum_error_rate(phred_scores, phred_length, phred_offset);
