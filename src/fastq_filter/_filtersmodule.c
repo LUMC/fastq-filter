@@ -696,9 +696,7 @@ static struct PyModuleDef _filters_module = {
 PyMODINIT_FUNC
 PyInit__filters(void)
 {
-    PyObject *m;
-
-    m = PyModule_Create(&_filters_module);
+    PyObject *m = PyModule_Create(&_filters_module);
     if (m == NULL) {
         return NULL;
     }
