@@ -8,6 +8,21 @@
     <command detect_errors="exit_code"><![CDATA[
         set -e;
         fastq-filter -o '${output1}.gz'
+        #if $minimum_length
+        --min-length $minimum_length
+        #end if
+        #if $maximum_length
+        --max-length $maximum_length
+        #end if
+        #if $average_error_rate
+        --average-error-rate $average_error_rate
+        #end if
+        #if $mean_quality
+        --mean-quality $mean_quality
+        #end if
+        #if $median_quality
+        --median-quality $median_quality
+        #end if
         --verbose
         '$input1';
         mv ${output1}.gz $output1
@@ -23,14 +38,14 @@
         <param name="average_error_rate" type="float" label="Average error rate"
                optional="true"
                help="The minimum average per base error rate."/>
-        <param name="mean_quality" type="float" label="Mean quality" optional="true">
+        <param name="mean_quality" type="integer" label="Mean quality" optional="true">
             <help>
                 Average quality. Same as the 'Average error rate' option but
                 specified with a phred score. I.e a mean quality of 30 is
                 equivalent to an average error rate of 0.001'.
             </help>
         </param>
-        <param name="median quality" type="float" label="Median quality"
+        <param name="median_quality" type="integer" label="Median quality"
                optional="true">
             <help>
                 DEPRECATED: The minimum median phred score. This is not as
@@ -44,7 +59,7 @@
         <!--Fastqsanger format for now. For conditionally applying fastqsanger.gz the tool needs
          to be updated. An option is using format auto_detect, so we do not have to conditionally set
          fastqsanger or fastqsanger.gz-->
-        <data name="output1" format="fastqsanger" />
+        <data name="output1" format="fastqsanger.gz" />
         <!--When the tool is updated for paired input, the optional paired output can probably be
         found in the cutadapt wrapper -->
     </outputs>
