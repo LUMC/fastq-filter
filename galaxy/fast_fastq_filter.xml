@@ -6,10 +6,11 @@
         <container type="docker">quay.io/rhpvorderman/fastq-filter:0.3.0</container>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
+        set -e;
         fastq-filter -o '${output1}.gz'
         --verbose
-        '$input1'
-        mv ${output1.gz} $output1
+        '$input1';
+        mv ${output1}.gz $output1
     ]]></command>
     <inputs>
         <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
