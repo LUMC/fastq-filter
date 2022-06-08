@@ -291,6 +291,7 @@ typedef struct {
     PyTypeObject *sequence_record_class;
     PyObject *sequence_record_atrr;
     uint8_t phred_offset;
+    vectorcallfunc *vector_call_func;
 } FastqFilter;
 
 static void
@@ -400,23 +401,25 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
-GenericFilter_ParseArgsToRecordTuple(PyObject *args, 
-                                     PyObject *kwargs, 
-                                     PyTypeObject *sequence_record_class) 
+GenericFilter_VectorCallToRecordTuple(PyObject *const *args, 
+                                      size_t nargsf, 
+                                      PyObject *kwnames,
+                                      PyTypeObject *sequence_record_class)
 {
-    if (kwargs != NULL) {
+    if (kwnames != NULL) {
         PyErr_Format(PyExc_TypeError, 
-                     "filter takes exactly 0 keyword arguments, got %d",
-                     PyDict_GET_SIZE(kwargs));
+                "filter takes exactly 0 keyword arguments, got %d",
+                PyTuple_GET_SIZE(kwnames));
         return NULL;
     }
-    if (PyTuple_GET_SIZE(args) != 1) {
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    if (nargs != 1) {
         PyErr_Format(PyExc_TypeError, 
-                     "filter takes exactly 1 positional argument, got %d",
-                     PyTuple_GET_SIZE(args));
+            "filter takes exactly 1 positional argument, got %d",
+            nargs);
         return NULL;
     }
-    PyObject *arg = PyTuple_GET_ITEM(args, 0);
+    PyObject *arg = args[0];
     if (!PyTuple_CheckExact(arg)) {
         PyErr_Format(PyExc_TypeError, 
                      "filter argument must be a tuple, got %s",
@@ -439,11 +442,15 @@ GenericFilter_ParseArgsToRecordTuple(PyObject *args,
     return arg;
 }
 
+
 static PyObject *
-AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
+AverageErrorRateFilter__call__(FastqFilter *self,
+                               PyObject *const *args,                                      
+                               size_t nargsf, 
+                               PyObject *kwnames)
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
-        args, kwargs, self->sequence_record_class);
+    PyObject *record_tuple = GenericFilter_VectorCallToRecordTuple(
+        args, nargsf, kwnames, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
@@ -490,10 +497,13 @@ AverageErrorRateFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwar
 }
 
 static PyObject *
-MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
+MedianQualityFilter__call__(FastqFilter *self,
+                            PyObject *const *args,                                      
+                            size_t nargsf, 
+                            PyObject *kwnames)
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
-        args, kwargs, self->sequence_record_class);
+    PyObject *record_tuple = GenericFilter_VectorCallToRecordTuple(
+        args, nargsf, kwnames, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
@@ -542,10 +552,13 @@ MedianQualityFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 
 
 static PyObject * 
-MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
+MinLengthFilter__call__(FastqFilter *self,
+                        PyObject *const *args,                                      
+                        size_t nargsf, 
+                        PyObject *kwnames)
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
-        args, kwargs, self->sequence_record_class);
+    PyObject *record_tuple = GenericFilter_VectorCallToRecordTuple(
+        args, nargsf, kwnames, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
@@ -570,10 +583,13 @@ MinLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs)
 }
 
 static PyObject *
-MaxLengthFilter__call__(FastqFilter *self, PyObject *args, PyObject *kwargs) 
+MaxLengthFilter__call__(FastqFilter *self,
+                        PyObject *const *args,                                      
+                        size_t nargsf, 
+                        PyObject *kwnames)
 {
-    PyObject *record_tuple = GenericFilter_ParseArgsToRecordTuple(
-        args, kwargs, self->sequence_record_class);
+    PyObject *record_tuple = GenericFilter_VectorCallToRecordTuple(
+        args, nargsf, kwnames, self->sequence_record_class);
     if (record_tuple == NULL) {
         return NULL;
     }
