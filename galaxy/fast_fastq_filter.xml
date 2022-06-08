@@ -125,11 +125,8 @@
         </test>
     </tests>
     <help><![CDATA[
-    Only filters with a value will be used to process the FASTQ data. Leave
-    filters with an empty value to disable them.
-
-    Fastq-filter ensures the output is in sync. When paired FASTQ files are
-    given the filters behave as follows:
+    When paired FASTQ data is given, fastq-filter makes sure the output is in
+    sync. The filters behave as follows for paired-end data:
 
     + average error rate: The average of the combined phred scores is used.
     + median quality: The median of the combined phred scores is used.
