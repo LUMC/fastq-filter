@@ -1,49 +1,135 @@
-<tool id="fast_fastq_filter" name="fastq-filter" version="0.1.0" python_template_version="3.5" profile="16.04">
+<tool id="fast_fastq_filter" name="fastq-filter" version="0.3.0" python_template_version="3.5" profile="16.04">
     <description>filter FASTQ reads fast</description>
     <requirements>
-        <requirement type="package" version="0.1.0">fastq-filter</requirement>
+        <requirement type="package" version="0.3.0">fastq-filter</requirement>
         <!-- TODO: Remove this once biocontainer is published -->
-        <container type="docker">quay.io/rhpvorderman/fastq-filter:0.1.0</container>
+        <container type="docker">quay.io/rhpvorderman/fastq-filter:0.3.0</container>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
-        #set all_filters = [str(filter['filter']) + ":" + str(filter['filter_threshold']) for filter in $filters]
-        fastq-filter -o '$output1'
-        #echo "'" + "|".join($all_filters) + "'"
-        '$input1'
+        set -e;
+        fastq-filter
+        #if str($filters.minimum_length.enabled) == "true"
+        --min-length $filters.minimum_length.threshold
+        #end if
+        #if str($filters.maximum_length.enabled) == "true"
+        --max-length $filters.maximum_length.threshold
+        #end if
+        #if str($filters.average_error_rate.enabled) == "true"
+        --average-error-rate $filters.average_error_rate.threshold
+        #end if
+        #if str($filters.mean_quality.enabled) == "true"
+        --mean-quality $filters.mean_quality.threshold
+        #end if
+        #if str($filters.median_quality.enabled) == "true"
+        --median-quality $filters.median_quality.threshold
+        #end if
+        --verbose
+        -o '${output1}.gz'
+        #if str($library.type) == "paired":
+        -o ${output2}.gz
+        #end if
+
+        '$library.input_1'
+        #if str($library.type) == "paired":
+        '$library.input_2'
+        #end if
+        ;
+
+        mv '${output1}.gz' '$output1';
+        #if str($library.type) == "paired":
+        mv '${output2}.gz' '$output2';
+        #end if
     ]]></command>
     <inputs>
-        <param type="data" name="input1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
-        <repeat name="filters" title="Filter" min="1">
-            <param name="filter" type="select" label="Filter on">
-              <option value="min_length">minimum length</option>
-              <option value="max_length">maximum length</option>
-              <option value="mean_quality" selected="true">mean quality</option>
-              <option value="median_quality">median quality</option>
+        <conditional name="library">
+            <param name="type" type="select" label="Single-end or Paired-end reads?">
+                <option value="single">Single-end</option>
+                <option value="paired">Paired-end</option>
             </param>
-            <param name="filter_threshold" type="integer" label="Filter threshold" value="20"/>
-        </repeat>
+            <when value="single">
+                <param type="data" name="input_1" label="Input FASTQ file" format="fastqsanger,fastqsanger.gz" />
+            </when>
+            <when value="paired">
+                <param type="data" name="input_1" label="Input FASTQ file #1" format="fastqsanger,fastqsanger.gz" />
+                <param type="data" name="input_2" label="Input FASTQ file #2" format="fastqsanger,fastqsanger.gz" />
+            </when>
+        </conditional>
+        <section name="filters" title="Filters" expanded="true">
+            <conditional name="minimum_length">
+                <param name="enabled" type="boolean" label="Minimum length"
+                       help="The minimum length for a read."/>
+                <when value="true">
+                    <param name="threshold" type="integer" label="Threshold"
+                           value="20" min="1"/>
+                </when>
+                <when value="false"/>
+            </conditional>
+            <conditional name="maximum_length">
+                <param name="enabled" type="boolean" label="Maximum length"
+                       help="The maximum length for a read."/>
+                <when value="true">
+                    <param name="threshold" type="integer" label="Threshold"
+                           value="1000" min="1"/>
+                </when>
+                <when value="false"/>
+            </conditional>
+            <conditional name="average_error_rate">
+                <param name="enabled" type="boolean" label="Average error rate"
+                       help="The minimum average per base error rate."/>
+                <when value="true">
+                    <param name="threshold" type="float" label="Threshold"
+                           value="0.001" min="0"/>
+                </when>
+                <when value="false"/>
+            </conditional>
+            <conditional name="mean_quality">
+                <param name="enabled" type="boolean" label="Mean quality">
+                    <help>
+                        Average quality. Same as the 'Average error rate' option but
+                        specified with a phred score. I.e a mean quality of 30 is
+                        equivalent to an average error rate of 0.001'.
+                    </help>
+                </param>
+                <when value="true">
+                    <param name="threshold" type="integer" label="Threshold"
+                           value="30" min="0"/>
+                </when>
+                <when value="false"/>
+            </conditional>
+            <conditional name="median_quality">
+                <param name="enabled" type="boolean" label="Median quality">
+                    <help>
+                        DEPRECATED: The minimum median phred score. This is not as
+                        informative as the average error rate. It is also slower to
+                        calculate. This filter is only included for backwards
+                        compatibility reasons.
+                    </help>
+                </param>
+                <when value="true">
+                    <param name="threshold" type="integer" label="Threshold"
+                           value="30" min="0"/>
+                </when>
+                <when value="false"/>
+            </conditional>
+        </section>
     </inputs>
     <outputs>
-        <!--Fastqsanger format for now. For conditionally applying fastqsanger.gz the tool needs
-         to be updated. An option is using format auto_detect, so we do not have to conditionally set
-         fastqsanger or fastqsanger.gz-->
-        <data name="output1" format="fastqsanger" />
-        <!--When the tool is updated for paired input, the optional paired output can probably be
-        found in the cutadapt wrapper -->
+        <data name="output1" format="fastqsanger.gz" />
+        <data name="output2" format="fastqsanger.gz">
+            <filter>library['type'] == 'paired'</filter>
+        </data>
     </outputs>
-    <tests>
-        <test>
-            <param name="input1" value="input.fastq.gz"/>
-            <output name="output1" file="output.fastq.gz"/>
-        </test>
-    </tests>
     <help><![CDATA[
-    The following filters are available:
+    When paired FASTQ data is given, fastq-filter makes sure the output is in
+    sync. The filters behave as follows for paired-end data:
 
-    + mean_quality:<quality>         The mean quality of the FASTQ record is equal or above the given quality value.
-    + median_quality:<quality>       The median quality of the FASTQ record is equal or above the given quality value.
-    + min_length:<length>            The length of the sequence in the FASTQ record is at least min_length
-    + max_length:<length>            The length of the sequence in the FASTQ record is at most max_length
+    + average error rate: The average of the combined phred scores is used.
+    + median quality: The median of the combined phred scores is used.
+    + Minimum length: at least one of the records of the pair must meet the minimum length.
+    + Maximum length: None of the records in the pair must exceed the maximum length.
+
+    The rationale for the length filters is that R1 and R2 both sequence the same
+    molecule and the canonical length is the longest of both.
 
     ]]></help>
     <citations>
