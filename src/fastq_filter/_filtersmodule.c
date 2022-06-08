@@ -339,7 +339,7 @@ import_dnaio_sequence_record()
     return SequenceRecord;
 }
 
-static PyObject *
+static FastqFilter *
 GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
     uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
@@ -368,10 +368,10 @@ GenericQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs
     self->pass = 0;
     self->sequence_record_class = sequence_record_class;
     self->sequence_record_atrr = sequence_record_attr;
-    return (PyObject *)self;
+    return self;
 }
 
-static PyObject *
+static FastqFilter *
 GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs) 
 {
     uint8_t phred_offset = DEFAULT_PHRED_SCORE_OFFSET;
@@ -397,7 +397,7 @@ GenericLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     // The PyObject_Length method can be used directly on a dnaio.SequenceRecord
     // rather than getting the "sequence" attribute and using PyUnicode_Length.
     self->sequence_record_atrr = NULL;
-    return (PyObject *)self;
+    return self;
 }
 
 static PyObject *
@@ -552,7 +552,7 @@ MedianQualityFilter__call__(FastqFilter *self,
 
 
 static PyObject * 
-MinLengthFilter__call__(FastqFilter *self,
+MinimumLengthFilter__call__(FastqFilter *self,
                         PyObject *const *args,                                      
                         size_t nargsf, 
                         PyObject *kwnames)
@@ -583,7 +583,7 @@ MinLengthFilter__call__(FastqFilter *self,
 }
 
 static PyObject *
-MaxLengthFilter__call__(FastqFilter *self,
+MaximumLengthFilter__call__(FastqFilter *self,
                         PyObject *const *args,                                      
                         size_t nargsf, 
                         PyObject *kwnames)
@@ -612,6 +612,51 @@ MaxLengthFilter__call__(FastqFilter *self,
     self->total += 1;
     Py_RETURN_TRUE;
 }
+
+static PyObject *
+AverageErrorRateFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+    FastqFilter *self = GenericQualityFilter__new__(type, args, kwargs);
+    if (self == NULL) {
+        return NULL;
+    }
+    self->vector_call_func = (vectorcallfunc *)&AverageErrorRateFilter__call__;
+    return (PyObject *)self;
+}
+
+static PyObject *
+MedianQualityFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+    FastqFilter *self = GenericQualityFilter__new__(type, args, kwargs);
+    if (self == NULL) {
+        return NULL;
+    }
+    self->vector_call_func = (vectorcallfunc *)&MedianQualityFilter__call__;
+    return (PyObject *)self;
+}
+
+static PyObject *
+MinimumLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+    FastqFilter *self = GenericLengthFilter__new__(type, args, kwargs);
+    if (self == NULL) {
+        return NULL;
+    }
+    self->vector_call_func = (vectorcallfunc *)&MinimumLengthFilter__call__;
+    return (PyObject *)self;
+}
+
+static PyObject *
+MaximumLengthFilter__new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+    FastqFilter *self = GenericLengthFilter__new__(type, args, kwargs);
+    if (self == NULL) {
+        return NULL;
+    }
+    self->vector_call_func = (vectorcallfunc *)&MaximumLengthFilter__call__;
+    return (PyObject *)self;
+}
+
 
 static PyObject *
 AverageErrorRateFilter_get_name(PyObject *self, void *closure)
@@ -654,8 +699,9 @@ static PyTypeObject AverageErrorRateFilter_Type = {
     .tp_name = "_filter.AverageErrorRateFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_dealloc = (destructor)FastqFilter_dealloc,
-    .tp_new = GenericQualityFilter__new__,
-    .tp_call = (ternaryfunc)AverageErrorRateFilter__call__,
+    .tp_new = AverageErrorRateFilter__new__,
+    .tp_call = PyVectorcall_Call,
+    .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
     .tp_members = GenericQualityFilterMembers,
     .tp_getset = AverageErrorRateFilter_properties,
 };
@@ -665,8 +711,9 @@ static PyTypeObject MedianQualityFilter_Type = {
     .tp_name = "_filter.MedianQualityFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_dealloc = (destructor)FastqFilter_dealloc,
-    .tp_new = GenericQualityFilter__new__,
-    .tp_call = (ternaryfunc)MedianQualityFilter__call__,
+    .tp_new = MedianQualityFilter__new__,
+    .tp_call = PyVectorcall_Call,
+    .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
     .tp_members = GenericQualityFilterMembers,
     .tp_getset = MedianQualityFilter_properties,
 };
@@ -676,8 +723,9 @@ static PyTypeObject MinimumLengthFilter_Type = {
     .tp_name = "_filter.MinimumLengthFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_dealloc = (destructor)FastqFilter_dealloc,
-    .tp_new = GenericLengthFilter__new__,
-    .tp_call = (ternaryfunc)MinLengthFilter__call__,
+    .tp_new = MinimumLengthFilter__new__,
+    .tp_call = PyVectorcall_Call,
+    .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
     .tp_members = GenericLengthFilterMembers,
     .tp_getset = MinimumLengthFilter_properties
 };
@@ -687,8 +735,9 @@ static PyTypeObject MaximumLengthFilter_Type = {
     .tp_name = "_filter.MaximumLengthFilter",
     .tp_basicsize = sizeof(FastqFilter),
     .tp_dealloc = (destructor)FastqFilter_dealloc,
-    .tp_new = GenericLengthFilter__new__,
-    .tp_call = (ternaryfunc)MaxLengthFilter__call__,
+    .tp_new = MaximumLengthFilter__new__,
+    .tp_call = PyVectorcall_Call,
+    .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
     .tp_members = GenericLengthFilterMembers,
     .tp_getset = MaximumLengthFilter_properties,
 };
