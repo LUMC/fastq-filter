@@ -124,12 +124,6 @@
         <!--When the tool is updated for paired input, the optional paired output can probably be
         found in the cutadapt wrapper -->
     </outputs>
-    <tests>
-        <test>
-            <param name="input1" value="input.fastq.gz"/>
-            <output name="output1" file="output.fastq.gz"/>
-        </test>
-    </tests>
     <help><![CDATA[
     When paired FASTQ data is given, fastq-filter makes sure the output is in
     sync. The filters behave as follows for paired-end data:
