@@ -93,7 +93,7 @@
                 </when>
             </conditional>
             <conditional name="median_quality">
-                <param name="enabled" type="boolean" label="Mean quality">
+                <param name="enabled" type="boolean" label="Median quality">
                     <help>
                         DEPRECATED: The minimum median phred score. This is not as
                         informative as the average error rate. It is also slower to
