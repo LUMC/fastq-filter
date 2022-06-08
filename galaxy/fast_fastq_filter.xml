@@ -8,20 +8,20 @@
     <command detect_errors="exit_code"><![CDATA[
         set -e;
         fastq-filter
-        #if $filters.minimum_length
-        --min-length $filters.minimum_length
+        #if str($minimum_length.enabled) == "true"
+        --min-length $minimum_length.threshold
         #end if
-        #if $filters.maximum_length
-        --max-length $filters.maximum_length
+        #if str($maximum_length.enabled) == "true"
+        --max-length $maximum_length.threshold
         #end if
-        #if $filters.average_error_rate
-        --average-error-rate $filters.average_error_rate
+        #if str($average_error_rate.enabled) == "true"
+        --average-error-rate $average_error_rate.threshold
         #end if
-        #if $filters.mean_quality
-        --mean-quality $filters.mean_quality
+        #if str($mean_quality.enabled) == "true"
+        --mean-quality $mean_quality.threshold
         #end if
-        #if $filters.median_quality
-        --median-quality $filters.median_quality
+        #if str($median_quality.enabled) == "true"
+        --median-quality $median_quality.threshold
         #end if
         --verbose
         -o '${output1}.gz'
@@ -55,26 +55,45 @@
             </when>
         </conditional>
 
-        <section name="filters" title="Filters" expanded="true">
-            <help>Only filters with a value will be used.></help>
-            <param name="minimum_length" type="integer" label="Minimum length"
-                   optional="true"
+        <conditional name="minimum_length">
+            <param name="enabled" type="boolean" label="Minimum length"
                    help="The minimum length for a read."/>
-            <param name="maximum_length" type="integer" label="Maximum length"
-                   optional="true"
+            <when value="true">
+                <param name="threshold" type="integer" label="Threshold"
+                       value="20" min="1"/>
+            </when>
+        </conditional>
+        <conditional name="maximum_length">
+            <param name="enabled" type="boolean" label="Maximum length"
                    help="The maximum length for a read."/>
-            <param name="average_error_rate" type="float" label="Average error rate"
-                   optional="true"
+            <when value="true">
+                <param name="threshold" type="integer" label="Threshold"
+                       value="1000" min="1"/>
+            </when>
+        </conditional>
+        <conditional name="average_error_rate">
+            <param name="enabled" type="boolean" label="Average error rate"
                    help="The minimum average per base error rate."/>
-            <param name="mean_quality" type="integer" label="Mean quality" optional="true">
+            <when value="true">
+                <param name="threshold" type="float" label="Threshold"
+                       value="0.001" min="0"/>
+            </when>
+        </conditional>
+        <conditional name="mean_quality">
+            <param name="enabled" type="boolean" label="Mean quality">
                 <help>
                     Average quality. Same as the 'Average error rate' option but
                     specified with a phred score. I.e a mean quality of 30 is
                     equivalent to an average error rate of 0.001'.
                 </help>
             </param>
-            <param name="median_quality" type="integer" label="Median quality"
-                   optional="true">
+            <when value="true">
+                <param name="threshold" type="integer" label="Threshold"
+                       value="30" min="0"/>
+            </when>
+        </conditional>
+        <conditional name="median_quality">
+            <param name="enabled" type="boolean" label="Mean quality">
                 <help>
                     DEPRECATED: The minimum median phred score. This is not as
                     informative as the average error rate. It is also slower to
@@ -82,7 +101,11 @@
                     compatibility reasons.
                 </help>
             </param>
-        </section>
+            <when value="true">
+                <param name="threshold" type="integer" label="Threshold"
+                       value="30" min="0"/>
+            </when>
+        </conditional>
     </inputs>
     <outputs>
         <!--Fastqsanger format for now. For conditionally applying fastqsanger.gz the tool needs
