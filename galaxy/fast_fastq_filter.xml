@@ -114,15 +114,10 @@
         </section>
     </inputs>
     <outputs>
-        <!--Fastqsanger format for now. For conditionally applying fastqsanger.gz the tool needs
-         to be updated. An option is using format auto_detect, so we do not have to conditionally set
-         fastqsanger or fastqsanger.gz-->
         <data name="output1" format="fastqsanger.gz" />
         <data name="output2" format="fastqsanger.gz">
             <filter>library['type'] == 'paired'</filter>
         </data>
-        <!--When the tool is updated for paired input, the optional paired output can probably be
-        found in the cutadapt wrapper -->
     </outputs>
     <help><![CDATA[
     When paired FASTQ data is given, fastq-filter makes sure the output is in
