@@ -702,6 +702,7 @@ static PyTypeObject AverageErrorRateFilter_Type = {
     .tp_new = AverageErrorRateFilter__new__,
     .tp_call = PyVectorcall_Call,
     .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,
     .tp_members = GenericQualityFilterMembers,
     .tp_getset = AverageErrorRateFilter_properties,
 };
@@ -714,6 +715,7 @@ static PyTypeObject MedianQualityFilter_Type = {
     .tp_new = MedianQualityFilter__new__,
     .tp_call = PyVectorcall_Call,
     .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,
     .tp_members = GenericQualityFilterMembers,
     .tp_getset = MedianQualityFilter_properties,
 };
@@ -726,6 +728,7 @@ static PyTypeObject MinimumLengthFilter_Type = {
     .tp_new = MinimumLengthFilter__new__,
     .tp_call = PyVectorcall_Call,
     .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,
     .tp_members = GenericLengthFilterMembers,
     .tp_getset = MinimumLengthFilter_properties
 };
@@ -738,6 +741,7 @@ static PyTypeObject MaximumLengthFilter_Type = {
     .tp_new = MaximumLengthFilter__new__,
     .tp_call = PyVectorcall_Call,
     .tp_vectorcall_offset = offsetof(FastqFilter, vector_call_func),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_VECTORCALL,
     .tp_members = GenericLengthFilterMembers,
     .tp_getset = MaximumLengthFilter_properties,
 };
