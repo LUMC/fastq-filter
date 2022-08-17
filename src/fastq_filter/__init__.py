@@ -220,7 +220,7 @@ def main():
     initiate_logger(args.verbose, args.quiet)
     log = logging.getLogger("fastq-filter")
     log.info(f"input files: {', '.join(args.input)}")
-    log.info(f"output files: {', '.join(args.output)}")
+    log.info(f"output files: {', '.join(output)}")
 
     # Filters are ordered from low cost to high cost.
     if args.min_length:
